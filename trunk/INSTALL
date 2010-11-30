@@ -1,0 +1,14 @@
+
+Simplified instructions:
+
+    1. ./configure
+    2. make 
+    3. sudo make install
+
+Please see
+
+    http://code.google.com/p/csvprintf
+
+for more information.
+
+$Id$
