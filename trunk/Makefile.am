@@ -21,5 +21,5 @@ csvprintf_SOURCES=	main.c \
 			svnrev.c
 
 svnrev.c:
-			printf 'const int csvprintf_svnrev = %u;\n' `svn info | grep -w Rev | sed -r 's/^.*Rev: //g'` > svnrev.c
+			printf 'const int csvprintf_svnrev = %u;\n' `svn info | grep -w Rev | sed 's/^.*Rev: //g'` > svnrev.c
 
