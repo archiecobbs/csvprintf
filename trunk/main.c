@@ -114,7 +114,7 @@ main(int argc, char **argv)
     }
     argc -= optind;
     argv += optind;
-    if (argc != xml ? 0 : 1) {
+    if (argc != (xml ? 0 : 1)) {
         usage();
         exit(1);
     }
