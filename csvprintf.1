@@ -1,0 +1,107 @@
+.\"  -*- nroff -*-
+.\"
+.\" csvprintf - Simple CSV file parser for the UNIX command line
+.\" 
+.\" Copyright 2010 Archie L. Cobbs <archie@dellroad.org>
+.\" 
+.\" Licensed under the Apache License, Version 2.0 (the "License"); you may
+.\" not use this file except in compliance with the License. You may obtain
+.\" a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+.\" 
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+.\" WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+.\" License for the specific language governing permissions and limitations
+.\" under the License.
+.\"
+.\" $Id$
+.\"
+.Dd November 30, 2010
+.Dt CSVPRINTF 1
+.Os
+.Sh NAME
+.Nm csvprintf
+.Nd Simple CSV file parser for the UNIX command line
+.Sh SYNOPSIS
+.Nm csvprintf
+.Bk -words
+.Op Fl i
+.Op Fl q char
+.Op Fl s char
+.Op Fl f file
+.Ar format
+.Ek
+.Pp
+.Nm csvprintf
+.Bk -words
+.Op Fl i
+.Op Fl q char
+.Op Fl s char
+.Op Fl f file
+.Fl x
+.Ek
+.Sh DESCRIPTION
+.Nm
+is a simple UNIX command line utility for parsing CSV files.
+.Pp
+.Nm
+works like the
+.Xr printf 1
+command line utility.
+You supply a
+.Xr printf 1
+format string on the command line and each record of the CSV file is formatted accordingly.
+Each format specifier in the format string is required to start with a column accessor to specify which CSV column to use.
+The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
+.Xr printf 3 ) .
+So for example,
+``%3$d''
+would format the third CSV column as a decimal value.
+.Pp
+.Nm
+can also convert CSV files into XML documents.
+.Sh OPTIONS
+.Bl -tag -width Ds
+.It Fl f
+Read CSV input from the specified file.
+By default (or if ``-'' is specified),
+.Nm
+reads from standard input.
+.It Fl i
+Ignore the very first CSV record in the input (typically contains column names).
+.It Fl q
+Specify an alternate CSV column quote character.
+The default quote character is double quote.
+.It Fl s
+Specify an alternate CSV column separator character.
+The default separator character is comma.
+.It Fl h
+Output usage message and exit.
+.It Fl v
+Output verion information and exit.
+.It Fl x
+Convert the CSV input into an XML document.
+This option assumes ISO-8859-1 encoding of the input.
+.Sh CSV FORMAT
+.Nm
+parses according to the format described by ``The Comma Separated Value (CSV) File Format'' (see below).
+In particular, quote characters must be escaped with an extra quote and whitespace surrounding column values is ignored.
+.Pp
+.Nm
+will exit with an non-zero exit value if invalid input is detected.
+.Sh SEE ALSO
+.Xr printf 1 ,
+.Xr printf 3 .
+.Rs
+.%T "csvprintf: Simple CSV file parser for the UNIX command line"
+.%O http://csvprintf.googlecode.com/
+.Re
+.Rs
+.%T "The Comma Separated Value (CSV) File Format"
+.%O http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm
+.Re
+.Sh BUGS
+.Nm
+assumes ISO-8859-1 encoding when converting to XML; this should be configurable.
+.Sh AUTHOR
+.An Archie L. Cobbs Aq archie@dellroad.org
