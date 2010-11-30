@@ -52,11 +52,13 @@ You supply a
 .Xr printf 1
 format string on the command line and each record of the CSV file is formatted accordingly.
 Each format specifier in the format string is required to start with a column accessor to specify which CSV column to use.
+.Pp
 The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
 .Xr printf 3 ) .
 So for example,
 ``%3$d''
 would format the third CSV column as a decimal value.
+In addition, the ``%0$d'' specifier will print the number of columns in the record.
 .Pp
 .Nm
 can also convert CSV files into XML documents.
