@@ -1,0 +1,63 @@
+#summary Wikified version of the csvprintf man page
+#labels Featured
+
+{{{
+CSVPRINTF(1)                                        BSD General Commands Manual                                        CSVPRINTF(1)
+
+NAME
+     csvprintf - Simple CSV file parser for the UNIX command line
+
+SYNOPSIS
+     csvprintf [-i] [-q -char] [-s -char] [-f -file] format
+
+     csvprintf [-i] [-q -char] [-s -char] [-f -file] -x
+
+DESCRIPTION
+     csvprintf is a simple UNIX command line utility for parsing CSV files.
+
+     csvprintf works like the printf(1) command line utility.  You supply a printf(1) format string on the command line and each
+     record of the CSV file is formatted accordingly.  Each format specifier in the format string is required to start with a col-
+     umn accessor to specify which CSV column to use.
+
+     The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
+     printf(3)).  So for example, ``%3$d'' would format the third CSV column as a decimal value.  In addition, the ``%0$d'' speci-
+     fier will print the number of columns in the record.
+
+     csvprintf can also convert CSV files into XML documents.
+
+OPTIONS
+     -f      Read CSV input from the specified file.  By default (or if ``-'' is specified), csvprintf reads from standard input.
+
+     -i      Ignore the very first CSV record in the input (typically contains column names).
+
+     -q      Specify an alternate CSV column quote character.  The default quote character is double quote.
+
+     -s      Specify an alternate CSV column separator character.  The default separator character is comma.
+
+     -h      Output usage message and exit.
+
+     -v      Output verion information and exit.
+
+     -x      Convert the CSV input into an XML document.  This option assumes ISO-8859-1 encoding of the input.
+
+CSV FORMAT
+     csvprintf parses according to the format described by ``The Comma Separated Value (CSV) File Format'' (see below).  In partic-
+     ular, quote characters must be escaped with an extra quote and whitespace surrounding column values is ignored.
+
+     csvprintf will exit with an non-zero exit value if invalid input is detected.
+
+SEE ALSO
+     printf(1), printf(3).
+
+     csvprintf: Simple CSV file parser for the UNIX command line, http://csvprintf.googlecode.com/.
+
+     The Comma Separated Value (CSV) File Format, http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm.
+
+BUGS
+     csvprintf assumes ISO-8859-1 encoding when converting to XML; this should be configurable.
+
+AUTHOR
+     Archie L. Cobbs <archie@dellroad.org>
+
+BSD                                                      November 30, 2010                                                      BSD
+}}}
