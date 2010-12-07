@@ -51,7 +51,7 @@ CSV FORMAT
      Format'' (see below).  In particular, quote characters must be escaped with an extra quote and
      whitespace surrounding column values is ignored.
 
-     csvprintf will exit with an non-zero exit value if invalid input is detected.
+     csvprintf will exit with a non-zero exit value if invalid input is detected.
 
 SEE ALSO
      printf(1), printf(3).
