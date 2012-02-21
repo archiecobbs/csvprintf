@@ -321,7 +321,7 @@ readqcol(FILE *fp, struct col *col, int *linenum)
                 (*linenum)++;
                 return 0;
             }
-            if (ch == ',')
+            if (ch == fsep)
                 return 1;
             if (isspace(ch))
                 continue;
@@ -364,7 +364,7 @@ readuqcol(FILE *fp, struct col *col, int *linenum)
             trim(col);
             return 0;
         }
-        if (ch == ',') {
+        if (ch == fsep) {
             trim(col);
             return 1;
         }
