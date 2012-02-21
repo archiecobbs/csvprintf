@@ -1,10 +1,7 @@
 
-Version 1.0.2
-
-    - Fix bug where `-s' flag did not function (Issue #1)
-
 Version 1.0.1
 
+    - Fix bug where `-s' flag did not function (Issue #1)
     - Document '%0$' specifier in man page
 
 Version 1.0 (r4) released November 30, 2010
