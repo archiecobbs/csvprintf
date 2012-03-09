@@ -23,7 +23,7 @@ Version:        1.0.2
 Release:        1
 License:        Apache License, Version 2.0
 Summary:        Simple CSV file parser for the UNIX command line
-Group:          System/Utilities
+Group:          Productivity/Text/Utilities
 Source:         %{name}-%{version}.tar.gz
 URL:            http://%{name}.googlecode.com/
 BuildRoot:      %{_tmppath}/%{name}-%{version}-root
