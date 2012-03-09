@@ -7,6 +7,7 @@ cat << "xxEOFxx"
 {{{
 xxEOFxx
 
+SEDFLAG='-r'
 if [ `uname -s` = 'Darwin' ]; then
     echo This doesn\'t work on Mac OS 1>&2
     exit 1
