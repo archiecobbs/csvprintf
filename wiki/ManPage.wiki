@@ -41,7 +41,7 @@ OPTIONS
 
      -h      Output usage message and exit.
 
-     -v      Output verion information and exit.
+     -v      Output version information and exit.
 
      -x      Convert the CSV input into an XML document.  This option assumes ISO-8859-1 encoding of
              the input.
