@@ -18,7 +18,7 @@
 # $Id$
 #
 
-AC_INIT([csvprintf - Simple CSV file parser for the UNIX command line], [1.0.1], [http://csvprintf.googlecode.com/], [csvprintf])
+AC_INIT([csvprintf - Simple CSV file parser for the UNIX command line], [1.0.2], [http://csvprintf.googlecode.com/], [csvprintf])
 AC_CONFIG_AUX_DIR(scripts)
 AM_INIT_AUTOMAKE
 dnl AM_MAINTAINER_MODE
