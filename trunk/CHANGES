@@ -1,5 +1,5 @@
 
-Version 1.0.1
+Version 1.0.1 (r17) released March 9, 2012
 
     - Fix bug where `-s' flag did not function (Issue #1)
     - Document '%0$' specifier in man page
