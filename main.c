@@ -523,14 +523,7 @@ parsechar(const char *str)
     case 4:
         if (*str != '\\')
             return -1;
-        ch = strtoul(str + 1, &eptr, 8);
-        if (*eptr != '\0')
-            return -1;
-        break;
-    case 5:
-        if (strncasecmp(str, "\\x", 2) != 0)
-            return -1;
-        ch = strtoul(str + 2, &eptr, 16);
+        ch = str[1] == 'x' ? strtoul(str + 2, &eptr, 16) : strtoul(str + 1, &eptr, 8);
         if (*eptr != '\0')
             return -1;
         break;
