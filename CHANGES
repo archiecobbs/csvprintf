@@ -1,4 +1,9 @@
 
+Version next
+
+    - Allow backslash escapes for `-s' and `-q' flags
+    - Accept files that lack a terminating newline
+
 Version 1.0.1 (r17) released March 9, 2012
 
     - Fix bug where `-s' flag did not function (Issue #1)

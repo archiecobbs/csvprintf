@@ -48,9 +48,10 @@ struct row {
     size_t  alloc;
 };
 
-static char quote = DEFAULT_QUOTE_CHAR;
-static char fsep = DEFAULT_FSEP_CHAR;
+static int quote = DEFAULT_QUOTE_CHAR;
+static int fsep = DEFAULT_FSEP_CHAR;
 
+static int parsechar(const char *str);
 static int parsefmt(char *fmt, unsigned int **argsp);
 static int readcol(FILE *fp, struct row *row, int *linenum);
 static int readqcol(FILE *fp, struct col *col, int *linenum);
@@ -91,14 +92,12 @@ main(int argc, char **argv)
             xml = 1;
             break;
         case 'q':
-            if (strlen(optarg) != 1)
+            if ((quote = parsechar(optarg)) == -1)
                 errx(1, "invalid argument to `-%c'", ch);
-            quote = optarg[0];
             break;
         case 's':
-            if (strlen(optarg) != 1)
+            if ((fsep = parsechar(optarg)) == -1)
                 errx(1, "invalid argument to `-%c'", ch);
-            fsep = optarg[0];
             break;
         case 'h':
             usage();
@@ -281,7 +280,7 @@ readcol(FILE *fp, struct row *row, int *linenum)
     // Process initial stuff; skip leading whitespace
     do {
         if ((ch = getc(fp)) == EOF)
-            errx(1, "line %d: premature EOF", *linenum);
+            ch = '\n';
         if (ch == '\n') {           // end of line forces empty column and terminates the row
             memset(&col, 0, sizeof(col));
             addcolumn(row, &col);
@@ -314,8 +313,12 @@ readqcol(FILE *fp, struct col *col, int *linenum)
     memset(col, 0, sizeof(*col));
     while (1) {
         assert(!escape || !done);
-        if ((ch = getc(fp)) == EOF)
-            errx(1, "line %d: premature EOF", *linenum);
+        if ((ch = getc(fp)) == EOF) {
+            if (escape || done)
+                ch = '\n';
+            else
+                errx(1, "line %d: premature EOF", *linenum);
+        }
         if (done) {
             if (ch == '\n') {
                 (*linenum)++;
@@ -358,7 +361,7 @@ readuqcol(FILE *fp, struct col *col, int *linenum)
     memset(col, 0, sizeof(*col));
     while (1) {
         if ((ch = getc(fp)) == EOF)
-            errx(1, "line %d: premature EOF", *linenum);
+            ch = '\n';
         if (ch == '\n') {
             (*linenum)++;
             trim(col);
@@ -474,6 +477,77 @@ parsefmt(char *fmt, unsigned int **argsp)
     // Done
     *argsp = args;
     return nargs;
+}
+
+static int
+parsechar(const char *str)
+{
+    char *eptr;
+    int ch;
+
+    switch (strlen(str)) {
+    case 1:
+        ch = (unsigned char)*str;
+        break;
+    case 2:
+        if (*str != '\\')
+            return -1;
+        switch (str[1]) {
+        case 'a':
+            ch = '\a';
+            break;
+        case 't':
+            ch = '\t';
+            break;
+        case 'b':
+            ch = '\b';
+            break;
+        case 'r':
+            ch = '\r';
+            break;
+        case 'f':
+            ch = '\f';
+            break;
+        case 'v':
+            ch = '\v';
+            break;
+        case '\\':
+        case '\'':
+        case '"':
+            ch = str[1];
+            break;
+        default:
+            return -1;
+        }
+        break;
+    case 4:
+        if (*str != '\\')
+            return -1;
+        ch = strtoul(str + 1, &eptr, 8);
+        if (*eptr != '\0')
+            return -1;
+        break;
+    case 5:
+        if (strncasecmp(str, "\\x", 2) != 0)
+            return -1;
+        ch = strtoul(str + 2, &eptr, 16);
+        if (*eptr != '\0')
+            return -1;
+        break;
+    default:
+        return -1;
+    }
+
+    // Disallow line separator
+    if (ch == '\n')
+        return -1;
+
+    // Disallow overflown values
+    if (ch != (ch & 0xff))
+        return -1;
+
+    // Done
+    return ch;
 }
 
 static char *
