@@ -1,8 +1,8 @@
-
-Version next
+Version 1.0.2 (r25) released August 25, 2012
 
     - Allow backslash escapes for `-s' and `-q' flags
     - Accept files that lack a terminating newline
+    - Accept CR, LF, or CR-LF line endings
 
 Version 1.0.1 (r17) released March 9, 2012
 

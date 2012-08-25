@@ -56,6 +56,7 @@ static int parsefmt(char *fmt, unsigned int **argsp);
 static int readcol(FILE *fp, struct row *row, int *linenum);
 static int readqcol(FILE *fp, struct col *col, int *linenum);
 static int readuqcol(FILE *fp, struct col *col, int *linenum);
+static int readch(FILE *fp, int collapse);
 static char *eatwidthprec(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
 static char *eataccessor(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
 static void addcolumn(struct row *row, const struct col *col);
@@ -146,7 +147,7 @@ main(int argc, char **argv)
         int i;
 
         // Start parsing next row
-        switch ((ch = getc(fp))) {
+        switch ((ch = readch(fp, 1))) {
         case EOF:
             file_done = 1;
             continue;
@@ -279,7 +280,7 @@ readcol(FILE *fp, struct row *row, int *linenum)
 
     // Process initial stuff; skip leading whitespace
     do {
-        if ((ch = getc(fp)) == EOF)
+        if ((ch = readch(fp, 1)) == EOF)
             ch = '\n';
         if (ch == '\n') {           // end of line forces empty column and terminates the row
             memset(&col, 0, sizeof(col));
@@ -309,11 +310,11 @@ readqcol(FILE *fp, struct col *col, int *linenum)
     int escape = 0;
     int ch;
 
-    getc(fp);
+    readch(fp, 0);
     memset(col, 0, sizeof(*col));
     while (1) {
         assert(!escape || !done);
-        if ((ch = getc(fp)) == EOF) {
+        if ((ch = readch(fp, 0)) == EOF) {
             if (escape || done)
                 ch = '\n';
             else
@@ -360,7 +361,7 @@ readuqcol(FILE *fp, struct col *col, int *linenum)
 
     memset(col, 0, sizeof(*col));
     while (1) {
-        if ((ch = getc(fp)) == EOF)
+        if ((ch = readch(fp, 1)) == EOF)
             ch = '\n';
         if (ch == '\n') {
             (*linenum)++;
@@ -566,6 +567,22 @@ eataccessor(const char *const fspec, const char *desc, char *s, int *nargs, unsi
     (*nargs)++;
     memmove(start, s + 1, strlen(s));
     return start;
+}
+
+// Like getc() but optionally collapses CR or CR, LF into a single LF
+static int
+readch(FILE *fp, int collapse)
+{
+    int ch;
+
+    ch = getc(fp);
+    if (collapse && ch == '\r') {
+        if ((ch = getc(fp)) != '\n') {
+            ungetc(ch, fp);
+            ch = '\n';
+        }
+    }
+    return ch;
 }
 
 static void
