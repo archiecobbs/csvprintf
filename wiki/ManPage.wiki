@@ -5,7 +5,7 @@
 CSVPRINTF(1)                         BSD General Commands Manual                        CSVPRINTF(1)
 
 NAME
-     csvprintf - Simple CSV file parser for the UNIX command line
+     csvprintf -- Simple CSV file parser for the UNIX command line
 
 SYNOPSIS
      csvprintf [-i] [-q -char] [-s -char] [-f -file] format
@@ -22,8 +22,8 @@ DESCRIPTION
 
      The column accessor is a sequence of decimal digits followed by the ``$'' character (the same
      accessor format supported by printf(3)).  So for example, ``%3$d'' would format the third CSV
-     column as a decimal value.  In addition, the ``%0$d'' specifier will print the number of
-     columns in the record.
+     column as a decimal value.  In addition, the ``%0$d'' specifier will print the number of col-
+     umns in the record.
 
      csvprintf can also convert CSV files into XML documents.
 
@@ -33,11 +33,11 @@ OPTIONS
 
      -i      Ignore the very first CSV record in the input (typically contains column names).
 
-     -q      Specify an alternate CSV column quote character.  The default quote character is double
-             quote.
+     -q      Specify an alternate CSV column quote character.  The usual backslash escape sequences
+             are accepted.  The default quote character is double quote.
 
-     -s      Specify an alternate CSV column separator character.  The default separator character
-             is comma.
+     -s      Specify an alternate CSV column separator character.  The usual backslash escape
+             sequences are accepted.  The default separator character is comma.
 
      -h      Output usage message and exit.
 
