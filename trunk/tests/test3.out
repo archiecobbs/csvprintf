@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<csv>
+  <row>
+    <col1>NAME</col1>
+    <col2>ADDRESS</col2>
+    <col3>POINTS</col3>
+  </row>
+  <row>
+    <col1>Fred Smith</col1>
+    <col2>1234 Main St.Anytown, USA   39103</col2>
+    <col3>123.4567</col3>
+  </row>
+  <row>
+    <col1>Wayne &quot;The Great One&quot; Gretsky</col1>
+    <col2>59 Hockey Lane</col2>
+    <col3>999999</col3>
+  </row>
+</csv>
