@@ -1,4 +1,4 @@
-Version 1.0.3 (r30) released January 5, 2013
+Version 1.0.3 (r32) released January 5, 2013
 
     - Add support for converting XML back to CSV
     - Add `-e' flag to set input character encoding
