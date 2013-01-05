@@ -1,0 +1,70 @@
+#!/bin/sh
+# $Id$
+
+# Set constants and defaults
+NAME="xml2csv"
+XSLTPROC="@XSLTPROC@"
+CSVXSL="@pkgdatadir@/csv.xsl"
+
+# Usage message
+usage()
+{
+    echo "Usage:" 1>&2
+    echo "    ${NAME} [input.xml]" 1>&2
+    echo "Options:" 1>&2
+    echo "    -h    Show this help message and exit" 1>&2
+}
+
+# Log functions
+log()
+{
+    echo ${NAME}: ${1+"$@"} 1>&2
+}
+
+# Error function
+errout()
+{
+    log ${1+"$@"}
+    exit 1
+}
+
+# Bail on errors
+set -e
+
+# Parse flags passed in on the command line
+while [ ${#} -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "${NAME}: unrecognized flag \`${1}'" 1>&2
+            usage
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+case "${#}" in
+    0)
+        INPUT_FILE="-"
+        ;;
+    1)
+        INPUT_FILE="${1}"
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
+
+# Run
+exec "${XSLTPROC}" "${CSVXSL}" "${INPUT_FILE}"
+

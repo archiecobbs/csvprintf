@@ -15,3 +15,5 @@ find . \( -name Makefile -o -name Makefile.in \) -print0 | xargs -0 rm -f
 rm -f svnrev.c
 rm -f *.o csvprintf
 rm -f csvprintf-?.?.?.tar.gz
+rm -f csvprintf.1
+rm -f xml2csv

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <csv>
   <row>
     <col1>NAME</col1>
@@ -7,7 +7,7 @@
   </row>
   <row>
     <col1>Fred Smith</col1>
-    <col2>1234 Main St.
+    <col2>1234 Main St.&#13;
 Anytown, USA   39103</col2>
     <col3>123.4567</col3>
   </row>

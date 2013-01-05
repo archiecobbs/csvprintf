@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <iconv.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,7 +35,7 @@
 
 #define DEFAULT_QUOTE_CHAR      '"'
 #define DEFAULT_FSEP_CHAR       ','
-#define PRINTF_FILENAME         "printf"
+#define XML_OUTPUT_ENCODING     "UTF-8"
 
 struct col {
     char    *buf;
@@ -69,7 +70,9 @@ int
 main(int argc, char **argv)
 {
     const char *input = "-";
+    const char *encoding = "ISO-8859-1";
     char *format = NULL;
+    iconv_t icd = NULL;
     FILE *fp = NULL;
     struct row row;
     unsigned int *args = NULL;
@@ -81,8 +84,11 @@ main(int argc, char **argv)
     int ch;
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "f:hiq:s:vx")) != -1) {
+    while ((ch = getopt(argc, argv, "e:f:hiq:s:vx")) != -1) {
         switch (ch) {
+        case 'e':
+            encoding = optarg;
+            break;
         case 'f':
             input = optarg;
             break;
@@ -137,14 +143,16 @@ main(int argc, char **argv)
 
     // XML opening
     if (xml) {
-        printf("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n");
+        if ((icd = iconv_open(XML_OUTPUT_ENCODING, encoding)) == (iconv_t)-1)
+            err(1, "%s", encoding);
+        printf("<?xml version=\"1.0\" encoding=\"%s\"?>\n", XML_OUTPUT_ENCODING);
         printf("<csv>\n");
     }
 
     // Read and parse input
     linenum = 1;
     for (file_done = 0; !file_done; ) {
-        int i;
+        int col;
 
         // Start parsing next row
         switch ((ch = readch(fp, 1))) {
@@ -173,13 +181,84 @@ main(int argc, char **argv)
         // Perform XML encoding
         if (xml) {
             printf("  <row>\n");
-            for (i = 0; i < row.num; i++) {
-                const char *s;
+            for (col = 0; col < row.num; col++) {
+                char *const ibuf = row.fields[col];
+                char *iptr;
+                char *obuf;
+                char *optr;
+                size_t iremain;
+                size_t oremain;
+                size_t olen;
+                int i;
 
-                printf("    <col%d>", i + 1);
-                for (s = row.fields[i]; *s != '\0'; s++) {
-                    int byte = (int)(unsigned char)*s;
-                    switch (byte) {
+                // Convert value to UTF-8 encoding
+                if (iconv(icd, NULL, NULL, NULL, NULL) == (size_t)-1)
+                    err(1, "iconv");
+                iremain = strlen(ibuf);
+                oremain = 64 + 4 * iremain;
+                if ((obuf = malloc(oremain)) == NULL)
+                    err(1, "malloc");
+                iptr = ibuf;
+                optr = obuf;
+                if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
+                    switch (errno) {
+                    case EILSEQ:
+                    case EINVAL:
+                        errx(1, "line %d: invalid multibyte sequence", linenum);
+                    default:
+                        err(1, "iconv");
+                    }
+                }
+                olen = optr - obuf;
+
+                // Open XML tag
+                printf("    <col%d>", col + 1);
+
+                // Output XML characters
+                for (i = 0; i < olen; ) {
+                    int uchar;
+                    int uclen;
+                    int j;
+
+                    // Decode UTF-8 character
+                    if ((obuf[i] & 0x80) == 0x00) {
+                        uclen = 1;
+                        uchar = obuf[i] & 0x7f;
+                    } else if ((obuf[i] & 0xe0) == 0xc0 && i + 1 < olen) {
+                        uclen = 2;
+                        uchar = ((obuf[i] & 0x1f) <<  6)
+                          | ((obuf[i + 1] & 0x3f) <<  0);
+                    } else if ((obuf[i] & 0xf0) == 0xe0 && i + 2 < olen) {
+                        uclen = 3;
+                        uchar = ((obuf[i] & 0x0f) << 12)
+                          | ((obuf[i + 1] & 0x3f) <<  6)
+                          | ((obuf[i + 2] & 0x3f) <<  0);
+                    } else if ((obuf[i] & 0xf8) == 0xf0 && i + 3 < olen) {
+                        uclen = 4;
+                        uchar = ((obuf[i] & 0x07) << 18)
+                          | ((obuf[i + 1] & 0x3f) << 12)
+                          | ((obuf[i + 2] & 0x3f) <<  6)
+                          | ((obuf[i + 3] & 0x3f) <<  0);
+                    } else if ((obuf[i] & 0xfc) == 0xf8 && i + 4 < olen) {
+                        uclen = 5;
+                        uchar = ((obuf[i] & 0x03) << 24)
+                          | ((obuf[i + 1] & 0x3f) << 18)
+                          | ((obuf[i + 2] & 0x3f) << 12)
+                          | ((obuf[i + 3] & 0x3f) <<  6)
+                          | ((obuf[i + 4] & 0x3f) <<  0);
+                    } else if ((obuf[i] & 0xfe) == 0xfc && i + 5 < olen) {
+                        uclen = 6;
+                        uchar = ((obuf[i] & 0x01) << 30)
+                          | ((obuf[i + 1] & 0x3f) << 24)
+                          | ((obuf[i + 2] & 0x3f) << 18)
+                          | ((obuf[i + 3] & 0x3f) << 12)
+                          | ((obuf[i + 4] & 0x3f) <<  6)
+                          | ((obuf[i + 5] & 0x3f) <<  0);
+                    } else
+                        errx(1, "line %d: internal error decoding UTF-8: 0x%02x", linenum, obuf[i] & 0xff);
+
+                    // Escape character as needed
+                    switch (uchar) {
                     case '>':
                         printf("&gt;");
                         break;
@@ -192,21 +271,32 @@ main(int argc, char **argv)
                     case '"':
                         printf("&quot;");
                         break;
-                    case '\n':
-                    case '\r':
-                    case '\t':
-                        putchar(*s);
-                        break;
                     default:
-                        if ((byte >= 0x20 && byte <= 0x7e) || (byte >= 0xa0 && byte <= 0xff)) {
-                            putchar(*s);
+
+                        // Pass valid and unrestricted characters through (but not CR)
+                        // http://en.wikipedia.org/wiki/Valid_characters_in_XML
+                        if ((uchar == '\n' || uchar == '\t'
+                            || (uchar >= 0x0020 && uchar <= 0xd7ff)
+                            || (uchar >= 0xe000 && uchar <= 0xfffd)
+                            || (uchar >= 0x10000 && uchar <= 0x10ffff))
+                          && !((uchar >= 0x007f && uchar <= 0x0084) || (uchar >= 0x0086 && uchar <= 0x009F))) {
+                            for (j = 0; j < uclen; j++)
+                                putchar(obuf[i + j]);
                             break;
                         }
-                        printf("&#%d;", byte);
+
+                        // Escape other characters
+                        printf("&#%u;", uchar);
                         break;
                     }
+
+                    // Advance to next UTF-8 character
+                    i += uclen;
                 }
-                printf("</col%d>\n", i + 1);
+                free(obuf);
+
+                // Close XML tag
+                printf("</col%d>\n", col + 1);
             }
             printf("  </row>\n");
         } else {
@@ -215,6 +305,7 @@ main(int argc, char **argv)
             pid_t pid;
             pid_t result;
             int status;
+            int i;
 
             fflush(stdout);
             fflush(stderr);
@@ -225,7 +316,7 @@ main(int argc, char **argv)
                 close(0);
                 if ((argv = malloc((nargs + 3) * sizeof(*argv))) == NULL)
                     err(1, "malloc");
-                argv[0] = strdup(PRINTF_FILENAME);
+                argv[0] = strdup("printf");
                 if (argv[0] == NULL)
                     err(1, "strdup");
                 argv[1] = format;
@@ -233,7 +324,7 @@ main(int argc, char **argv)
                 for (i = 0; i < nargs; i++)
                     argv[2 + i] = args[i] == 0 ? ncolbuf : args[i] <= row.num ? row.fields[args[i] - 1] : empty;
                 argv[2 + nargs] = NULL;
-                execvp(PRINTF_FILENAME, argv);
+                execvp(PRINTF_PROGRAM, argv);
                 err(1, "execvp");
             default:
                 while (1) {
@@ -258,8 +349,10 @@ next:
     }
 
     // XML closing
-    if (xml)
+    if (xml) {
         printf("</csv>\n");
+        (void)iconv_close(icd);
+    }
 
     // Clean up
     if (fp != stdin)
