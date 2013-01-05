@@ -122,6 +122,7 @@ fails, processing stops and that exit value is returned.
 .Bl -tag -width Ds -compact
 .It Pa @pkgdatadir@/csv.xsl
 XSL transform that converts XML back into CSV format.
+.El
 .Sh SEE ALSO
 .Xr printf 1 ,
 .Xr printf 3 .
