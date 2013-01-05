@@ -41,7 +41,21 @@ AC_DEFINE(_DARWIN_C_SOURCE, 1, MacOS functions)
 # Check for required programs
 AC_PROG_INSTALL
 AC_PROG_CC
-AC_CHECK_PROG([PRINTF], [printfx], yes)
+AC_PATH_PROG([PRINTF], [printf], yes)
+if test -z "${PRINTF}"; then
+    AC_MSG_ERROR([printf not found]);
+fi
+AC_PATH_PROG([XSLTPROC], [xsltproc], yes)
+if test -z "${XSLTPROC}"; then
+    AC_MSG_ERROR([xsltproc not found]);
+fi
+
+# Add PRINTF def
+[CFLAGS="$CFLAGS -DPRINTF_PROGRAM=\\\""${PRINTF}"\\\""]
+
+# Check for required libc functions
+AC_CHECK_LIB(c, iconv_open,,
+    [AC_MSG_ERROR([required function iconv_open missing])])
 
 # Check for required header files
 AC_HEADER_STDC

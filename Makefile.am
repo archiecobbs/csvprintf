@@ -7,18 +7,40 @@
 
 bin_PROGRAMS=		csvprintf
 
+dist_bin_SCRIPTS=	xml2csv
+
 noinst_HEADERS=		csvprintf.h
 
 man_MANS=		csvprintf.1
 
+pkgdata_DATA=		csv.xsl
+
 docdir=			$(datadir)/doc/packages/$(PACKAGE)
 
-doc_DATA=		CHANGES COPYING README INSTALL
+doc_DATA=		CHANGES COPYING README
 
-EXTRA_DIST=		CHANGES csvprintf.1 csvprintf.spec
+EXTRA_DIST=		CHANGES INSTALL csvprintf.1.in csv.xsl
 
 csvprintf_SOURCES=	main.c \
 			svnrev.c
+
+DISTCLEANFILES=		csvprintf.1
+
+SUFFIXES=		.in
+.in:
+			rm -f $@; $(subst) < $< >$@
+
+subst=			sed \
+			    -e 's|@PACKAGE[@]|$(PACKAGE)|g' \
+			    -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
+			    -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
+			    -e 's|@XSLTPROC[@]|$(XSLTPROC)|g'
+
+install-data-hook:
+			ln "$(DESTDIR)$(man1dir)"/csvprintf.1 "$(DESTDIR)$(man1dir)"/xml2csv.1
+
+uninstall-hook:
+			rm -f "$(DESTDIR)$(man1dir)"/xml2csv.1
 
 svnrev.c:
 			printf 'const int csvprintf_svnrev = %u;\n' `svn info | grep -w Rev | sed 's/^.*Rev: //g'` > svnrev.c

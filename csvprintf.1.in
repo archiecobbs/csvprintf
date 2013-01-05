@@ -38,7 +38,13 @@
 .Op Fl q Ar char
 .Op Fl s Ar char
 .Op Fl f Ar file
+.Op Fl e Ar enc
 .Fl x
+.Ek
+.Pp
+.Nm xml2csv
+.Bk -words
+.Op Ar file.xml
 .Ek
 .Sh DESCRIPTION
 .Nm
@@ -54,16 +60,29 @@ format string on the command line and each record of the CSV file is formatted a
 Each format specifier in the format string is required to start with a column accessor to specify which CSV column to use.
 .Pp
 The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
-.Xr printf 3 ) .
+.Xr printf 1 ) .
 So for example,
 ``%3$d''
 would format the third CSV column as a decimal value.
 In addition, the ``%0$d'' specifier will print the number of columns in the record.
 .Pp
+Under the hood,
+.Nm
+invokes the
+.Xr printf 1
+executable on each CSV row it parses.
+.Pp
 .Nm
 can also convert CSV files into XML documents.
+The
+.Nm xml2csv
+command converts XML documents so generated back into CSV files.
 .Sh OPTIONS
 .Bl -tag -width Ds
+.It Fl e
+Specify input character encoding.
+By default, ISO-8859-1 is assumed.
+This option only affects XML mode.
 .It Fl f
 Read CSV input from the specified file.
 By default (or if ``-'' is specified),
@@ -85,15 +104,24 @@ Output usage message and exit.
 Output version information and exit.
 .It Fl x
 Convert the CSV input into an XML document.
-This option assumes ISO-8859-1 encoding of the input.
+If the input character encoding is other than ISO-8859-1, specify using the
+.Fl e
+flag.
 .El
 .Sh CSV FORMAT
 .Nm
 parses according to the format described by ``The Comma Separated Value (CSV) File Format'' (see below).
 In particular, quote characters must be escaped with an extra quote and whitespace surrounding column values is ignored.
-.Pp
+.Sh EXIT STATUS
 .Nm
-will exit with a non-zero exit value if invalid input is detected.
+will exit with a status 1 if invalid CSV input is detected.
+Otherwise, if an invocation of
+.Xr printf 1
+fails, processing stops and that exit value is returned.
+.Sh FILES
+.Bl -tag -width Ds -compact
+.It Pa @pkgdatadir@/csv.xsl
+XSL transform that converts XML back into CSV format.
 .Sh SEE ALSO
 .Xr printf 1 ,
 .Xr printf 3 .
@@ -105,8 +133,5 @@ will exit with a non-zero exit value if invalid input is detected.
 .%T "The Comma Separated Value (CSV) File Format"
 .%O http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm
 .Re
-.Sh BUGS
-.Nm
-assumes ISO-8859-1 encoding when converting to XML; this should be configurable.
 .Sh AUTHOR
 .An Archie L. Cobbs Aq archie@dellroad.org

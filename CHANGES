@@ -1,3 +1,10 @@
+Version Next
+
+    - Add support for converting XML back to CSV
+    - Add `-e' flag to set input character encoding
+    - Escape CR characters in XML output
+    - Fixed glitches in man page
+
 Version 1.0.2 (r25) released August 25, 2012
 
     - Allow backslash escapes for `-s' and `-q' flags
