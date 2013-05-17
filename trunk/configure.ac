@@ -41,11 +41,11 @@ AC_DEFINE(_DARWIN_C_SOURCE, 1, MacOS functions)
 # Check for required programs
 AC_PROG_INSTALL
 AC_PROG_CC
-AC_PATH_PROG([PRINTF], [printf], yes)
+AC_PATH_PROG([PRINTF], [printf])
 if test -z "${PRINTF}"; then
     AC_MSG_ERROR([printf not found]);
 fi
-AC_PATH_PROG([XSLTPROC], [xsltproc], yes)
+AC_PATH_PROG([XSLTPROC], [xsltproc])
 if test -z "${XSLTPROC}"; then
     AC_MSG_ERROR([xsltproc not found]);
 fi
