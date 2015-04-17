@@ -22,7 +22,7 @@ doc_DATA=		CHANGES COPYING README
 EXTRA_DIST=		CHANGES INSTALL csvprintf.1.in csv.xsl
 
 csvprintf_SOURCES=	main.c \
-			svnrev.c
+			gitrev.c
 
 DISTCLEANFILES=		csvprintf.1
 
@@ -42,6 +42,6 @@ install-data-hook:
 uninstall-hook:
 			rm -f "$(DESTDIR)$(man1dir)"/xml2csv.1
 
-svnrev.c:
-			printf 'const int csvprintf_svnrev = %u;\n' `svn info | grep -w Rev | sed 's/^.*Rev: //g'` > svnrev.c
+gitrev.c:
+			printf 'const char *const csvprintf_version = "%s";\n' "`git describe`" > gitrev.c
 

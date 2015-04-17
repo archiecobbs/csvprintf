@@ -128,7 +128,7 @@ XSL transform that converts XML back into CSV format.
 .Xr printf 3 .
 .Rs
 .%T "csvprintf: Simple CSV file parser for the UNIX command line"
-.%O http://csvprintf.googlecode.com/
+.%O https://github.com/archiecobbs/csvprintf
 .Re
 .Rs
 .%T "The Comma Separated Value (CSV) File Format"

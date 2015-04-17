@@ -21,5 +21,5 @@
 
 #include "config.h"
 
-extern const int csvprintf_svnrev;
+extern const char *const csvprintf_version;
 

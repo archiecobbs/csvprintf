@@ -12,7 +12,7 @@ rm -rf autom4te*.cache scripts aclocal.m4 configure config.log config.status .de
 rm -f config.h.in config.h.in~ config.h
 rm -f scripts
 find . \( -name Makefile -o -name Makefile.in \) -print0 | xargs -0 rm -f
-rm -f svnrev.c
+rm -f gitrev.c
 rm -f *.o csvprintf
 rm -f csvprintf-?.?.?.tar.gz
 rm -f csvprintf.1
