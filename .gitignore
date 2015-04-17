@@ -1,0 +1,17 @@
+aclocal.m4
+autom4te.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+csvprintf
+csvprintf.1
+.deps
+gitrev.c
+Makefile
+Makefile.in
+*.o
+scripts
+stamp-h1
+xml2csv
