@@ -4,7 +4,7 @@
 
 **csvprintf** can also convert CSV files into XML documents.
 
-You can view the [ManPage](ManPage.md) online.
+You can view the [ManPage](https://github.com/archiecobbs/csvprintf/wiki/ManPage) online.
 
 ### Examples
 
