@@ -15,8 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-# $Id$
-#
 
 AC_INIT([csvprintf - Simple CSV file parser for the UNIX command line], [1.0.3], [https://github.com/archiecobbs/csvprintf], [csvprintf])
 AC_CONFIG_AUX_DIR(scripts)

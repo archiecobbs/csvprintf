@@ -2,8 +2,6 @@
 #
 # csvprintf - Simple CSV file parser for the UNIX command line
 # 
-# $Id$
-#
 
 bin_PROGRAMS=		csvprintf
 

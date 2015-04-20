@@ -14,8 +14,6 @@
 .\" License for the specific language governing permissions and limitations
 .\" under the License.
 .\"
-.\" $Id$
-.\"
 .Dd November 30, 2010
 .Dt CSVPRINTF 1
 .Os

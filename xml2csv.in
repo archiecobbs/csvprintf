@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 
 # Set constants and defaults
 NAME="xml2csv"
