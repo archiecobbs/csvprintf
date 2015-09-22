@@ -52,7 +52,7 @@ fi
 [CFLAGS="$CFLAGS -DPRINTF_PROGRAM=\\\""${PRINTF}"\\\""]
 
 # Check for required libc functions
-AC_CHECK_LIB(c, iconv_open,,
+AC_SEARCH_LIBS([iconv_open], [iconv],,
     [AC_MSG_ERROR([required function iconv_open missing])])
 
 # Check for required header files
