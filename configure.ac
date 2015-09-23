@@ -53,7 +53,7 @@ fi
 
 # Check for required libc functions
 AC_SEARCH_LIBS([iconv_open], [iconv],,
-    [AC_MSG_ERROR([required function iconv_open missing])])
+    [if test `uname -o` = 'Cygwin' -a -f /usr/lib/libiconv.a; then LIBS="-liconv ${LIBS}"; else AC_MSG_ERROR([required function iconv_open missing]); fi])
 
 # Check for required header files
 AC_HEADER_STDC
