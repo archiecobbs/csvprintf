@@ -344,6 +344,7 @@ next:
         // Free memory
         while (row.num > 0)
             free(row.fields[--row.num]);
+        free(row.fields);
     }
 
     // XML closing
