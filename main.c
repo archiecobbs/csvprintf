@@ -50,6 +50,8 @@ struct row {
 static int quote = DEFAULT_QUOTE_CHAR;
 static int fsep = DEFAULT_FSEP_CHAR;
 
+static char *transcode(iconv_t icd, int linenum, char *ibuf, size_t *olenp);
+static int decode_utf8(const char *ptr, size_t lenp);
 static int parsechar(const char *str);
 static int parsefmt(char *fmt, unsigned int **argsp);
 static int readcol(FILE *fp, struct row *row, int *linenum);
@@ -74,15 +76,18 @@ main(int argc, char **argv)
     FILE *fp = NULL;
     struct row row;
     unsigned int *args = NULL;
+    struct col *xml_tags = NULL;
+    int num_xml_tags = 0;
     int nargs = 0;
     int file_done;
     int linenum;
     int xml = 0;
+    int xml_header_tags = 0;
     int skip = 0;
     int ch;
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "e:f:hiq:s:vx")) != -1) {
+    while ((ch = getopt(argc, argv, "e:f:hiq:s:vXx")) != -1) {
         switch (ch) {
         case 'e':
             encoding = optarg;
@@ -95,6 +100,11 @@ main(int argc, char **argv)
             break;
         case 'x':
             xml = 1;
+            break;
+        case 'X':
+            xml = 1;
+            skip = 1;
+            xml_header_tags = 1;
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -173,6 +183,35 @@ main(int argc, char **argv)
         // Skip first row?
         if (skip) {
             skip = 0;
+
+            // XML header tag names?
+            if (xml_header_tags) {
+                num_xml_tags = row.num;
+                if ((xml_tags = calloc(num_xml_tags * sizeof(*xml_tags))) == NULL)
+                    err(1, "malloc");
+                for (col = 0; col < row.num; col++) {
+                    struct col *const tag = &xml_tags[col];
+                    char *obuf;
+                    size_t olen;
+
+                    obuf = transcode(icd, linenum, row.fields[col], &olen);
+                    if (olen == 0)
+                        addchar(tag, '_');
+                    else {
+                        int uclen;
+
+// see http://www.xml.com/pub/a/2001/07/25/namingparts.html
+
+                        for (i = 0; i < olen; uclen += ) {
+                            int uchar;
+
+                            uchar = decode_utf8(obuf + i, &uclen);
+                            if (
+                        }
+                    }
+                }
+            }
+
             goto next;
         }
 
@@ -180,80 +219,24 @@ main(int argc, char **argv)
         if (xml) {
             printf("  <row>\n");
             for (col = 0; col < row.num; col++) {
-                char *const ibuf = row.fields[col];
-                char *iptr;
                 char *obuf;
-                char *optr;
-                size_t iremain;
-                size_t oremain;
-                size_t olen;
+                size_t remain;
                 int i;
 
                 // Convert value to UTF-8 encoding
-                if (iconv(icd, NULL, NULL, NULL, NULL) == (size_t)-1)
-                    err(1, "iconv");
-                iremain = strlen(ibuf);
-                oremain = 64 + 4 * iremain;
-                if ((obuf = malloc(oremain)) == NULL)
-                    err(1, "malloc");
-                iptr = ibuf;
-                optr = obuf;
-                if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
-                    switch (errno) {
-                    case EILSEQ:
-                    case EINVAL:
-                        errx(1, "line %d: invalid multibyte sequence", linenum);
-                    default:
-                        err(1, "iconv");
-                    }
-                }
-                olen = optr - obuf;
-
-                // Open XML tag
-                printf("    <col%d>", col + 1);
+                obuf = transcode(icd, linenum, row.fields[col], &remain);
 
                 // Output XML characters
-                for (i = 0; i < olen; ) {
+                for (i = 0; remain > 0; ) {
+                    int start;
                     int uchar;
                     int uclen;
                     int j;
 
                     // Decode UTF-8 character
-                    if ((obuf[i] & 0x80) == 0x00) {
-                        uclen = 1;
-                        uchar = obuf[i] & 0x7f;
-                    } else if ((obuf[i] & 0xe0) == 0xc0 && i + 1 < olen) {
-                        uclen = 2;
-                        uchar = ((obuf[i] & 0x1f) <<  6)
-                          | ((obuf[i + 1] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xf0) == 0xe0 && i + 2 < olen) {
-                        uclen = 3;
-                        uchar = ((obuf[i] & 0x0f) << 12)
-                          | ((obuf[i + 1] & 0x3f) <<  6)
-                          | ((obuf[i + 2] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xf8) == 0xf0 && i + 3 < olen) {
-                        uclen = 4;
-                        uchar = ((obuf[i] & 0x07) << 18)
-                          | ((obuf[i + 1] & 0x3f) << 12)
-                          | ((obuf[i + 2] & 0x3f) <<  6)
-                          | ((obuf[i + 3] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xfc) == 0xf8 && i + 4 < olen) {
-                        uclen = 5;
-                        uchar = ((obuf[i] & 0x03) << 24)
-                          | ((obuf[i + 1] & 0x3f) << 18)
-                          | ((obuf[i + 2] & 0x3f) << 12)
-                          | ((obuf[i + 3] & 0x3f) <<  6)
-                          | ((obuf[i + 4] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xfe) == 0xfc && i + 5 < olen) {
-                        uclen = 6;
-                        uchar = ((obuf[i] & 0x01) << 30)
-                          | ((obuf[i + 1] & 0x3f) << 24)
-                          | ((obuf[i + 2] & 0x3f) << 18)
-                          | ((obuf[i + 3] & 0x3f) << 12)
-                          | ((obuf[i + 4] & 0x3f) <<  6)
-                          | ((obuf[i + 5] & 0x3f) <<  0);
-                    } else
-                        errx(1, "line %d: internal error decoding UTF-8: 0x%02x", linenum, obuf[i] & 0xff);
+                    start = remain;
+                    uchar = decode_utf8(obuf + i, &remain);
+                    uclen = start - remain;
 
                     // Escape character as needed
                     switch (uchar) {
@@ -360,6 +343,94 @@ next:
     // Done
     fflush(stdout);
     return 0;
+}
+
+//
+// Transcode a string
+//
+static char *
+transcode(const iconv_t icd, int linenum, char *const ibuf, size_t *const olenp)
+{
+    char *iptr;
+    char *obuf;
+    char *optr;
+    size_t iremain;
+    size_t oremain;
+    size_t olen;
+    int i;
+
+    // Convert value to UTF-8 encoding
+    if (iconv(icd, NULL, NULL, NULL, NULL) == (size_t)-1)
+        err(1, "iconv");
+    iremain = strlen(ibuf);
+    oremain = 64 + 4 * iremain;
+    if ((obuf = malloc(oremain)) == NULL)
+        err(1, "malloc");
+    iptr = ibuf;
+    optr = obuf;
+    if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
+        switch (errno) {
+        case EILSEQ:
+        case EINVAL:
+            errx(1, "line %d: invalid multibyte sequence", linenum);
+        default:
+            err(1, "iconv");
+        }
+    }
+    *olenp = optr - obuf;
+    return obuf;
+}
+
+//
+// Decode a UTF-8 character
+//
+static int
+decode_utf8(const char **const ptrp, int *lenp)
+{
+    const char *const ptr = *ptrp;
+    int uchar;
+    int len;
+
+    if (*lenp <= 0)
+        errx(1, "line %d: internal error decoding UTF-8: truncated");
+    if ((ptr[0] & 0x80) == 0x00) {
+        len = 1;
+        uchar = ptr[0] & 0x7f;
+    } else if ((ptr[0] & 0xe0) == 0xc0 && 1 < *lenp) {
+        len = 2;
+        uchar = ((ptr[0] & 0x1f) <<  6)
+          | ((ptr[1] & 0x3f) <<  0);
+    } else if ((ptr[0] & 0xf0) == 0xe0 && 2 < *lenp) {
+        len = 3;
+        uchar = ((ptr[0] & 0x0f) << 12)
+          | ((ptr[1] & 0x3f) <<  6)
+          | ((ptr[2] & 0x3f) <<  0);
+    } else if ((ptr[0] & 0xf8) == 0xf0 && 3 < *lenp) {
+        len = 4;
+        uchar = ((ptr[0] & 0x07) << 18)
+          | ((ptr[1] & 0x3f) << 12)
+          | ((ptr[2] & 0x3f) <<  6)
+          | ((ptr[3] & 0x3f) <<  0);
+    } else if ((ptr[0] & 0xfc) == 0xf8 && 4 < *lenp) {
+        len = 5;
+        uchar = ((ptr[0] & 0x03) << 24)
+          | ((ptr[1] & 0x3f) << 18)
+          | ((ptr[2] & 0x3f) << 12)
+          | ((ptr[3] & 0x3f) <<  6)
+          | ((ptr[4] & 0x3f) <<  0);
+    } else if ((ptr[0] & 0xfe) == 0xfc && 5 < *lenp) {
+        len = 6;
+        uchar = ((ptr[0] & 0x01) << 30)
+          | ((ptr[1] & 0x3f) << 24)
+          | ((ptr[2] & 0x3f) << 18)
+          | ((ptr[3] & 0x3f) << 12)
+          | ((ptr[4] & 0x3f) <<  6)
+          | ((ptr[5] & 0x3f) <<  0);
+    } else
+        errx(1, "line %d: internal error decoding UTF-8: 0x%02x", linenum, ptr[0] & 0xff);
+    *ptrp += len;
+    *lenp -= len;
+    return uchar;
 }
 
 static int
