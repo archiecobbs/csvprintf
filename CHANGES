@@ -1,3 +1,7 @@
+Version Next
+
+    - Fixed "unexpected character" bug when line ends with QUOTE, CR
+
 Version 1.0.3 (r32) released January 5, 2013
 
     - Add support for converting XML back to CSV

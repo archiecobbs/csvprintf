@@ -406,7 +406,7 @@ readqcol(FILE *fp, struct col *col, int *linenum)
     memset(col, 0, sizeof(*col));
     while (1) {
         assert(!escape || !done);
-        if ((ch = readch(fp, 0)) == EOF) {
+        if ((ch = readch(fp, escape)) == EOF) {
             if (escape || done)
                 ch = '\n';
             else
