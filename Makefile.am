@@ -22,7 +22,7 @@ EXTRA_DIST=		CHANGES INSTALL csvprintf.1.in xml2csv.in csv.xsl
 csvprintf_SOURCES=	main.c \
 			gitrev.c
 
-DISTCLEANFILES=		csvprintf.1
+DISTCLEANFILES=		csvprintf.1 xml2csv
 
 SUFFIXES=		.in
 .in:
