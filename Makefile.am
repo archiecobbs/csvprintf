@@ -5,7 +5,7 @@
 
 bin_PROGRAMS=		csvprintf
 
-dist_bin_SCRIPTS=	xml2csv
+bin_SCRIPTS=		xml2csv
 
 noinst_HEADERS=		csvprintf.h
 
@@ -17,7 +17,7 @@ docdir=			$(datadir)/doc/packages/$(PACKAGE)
 
 doc_DATA=		CHANGES COPYING README
 
-EXTRA_DIST=		CHANGES INSTALL csvprintf.1.in csv.xsl
+EXTRA_DIST=		CHANGES INSTALL csvprintf.1.in xml2csv.in csv.xsl
 
 csvprintf_SOURCES=	main.c \
 			gitrev.c
