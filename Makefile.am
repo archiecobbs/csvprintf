@@ -28,6 +28,9 @@ SUFFIXES=		.in
 .in:
 			rm -f $@; $(subst) < $< >$@
 
+test:			csvprintf
+			cd tests && ./run.sh
+
 subst=			sed \
 			    -e 's|@PACKAGE[@]|$(PACKAGE)|g' \
 			    -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
