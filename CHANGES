@@ -1,4 +1,4 @@
-Version Next
+Version 1.0.4 released August 1, 2018
 
     - Fixed "unexpected character" bug when line ends with QUOTE, CR
     - Added "-X" flag to derive XML tag names from column headers
