@@ -1,6 +1,7 @@
 Version Next
 
     - Fixed "unexpected character" bug when line ends with QUOTE, CR
+    - Added "-X" flag to derive XML tag names from column headers
 
 Version 1.0.3 (r32) released January 5, 2013
 

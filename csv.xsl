@@ -5,9 +5,7 @@
     <xsl:output method="text" encoding="UTF-8" media-type="text/csv"/>
 
     <xsl:template match="/csv/row">
-        <xsl:apply-templates select="*[starts-with(name(.), 'col')]">
-            <xsl:sort select="substring(name(.), 4)" data-type="number"/>
-        </xsl:apply-templates>
+        <xsl:apply-templates select="*"/>
         <xsl:value-of select="'&#10;'"/>
     </xsl:template>
 

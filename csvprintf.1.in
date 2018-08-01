@@ -1,13 +1,13 @@
 .\"  -*- nroff -*-
 .\"
 .\" csvprintf - Simple CSV file parser for the UNIX command line
-.\" 
+.\"
 .\" Copyright 2010 Archie L. Cobbs <archie@dellroad.org>
-.\" 
+.\"
 .\" Licensed under the Apache License, Version 2.0 (the "License"); you may
 .\" not use this file except in compliance with the License. You may obtain
 .\" a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-.\" 
+.\"
 .\" Unless required by applicable law or agreed to in writing, software
 .\" distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 .\" WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -32,12 +32,22 @@
 .Pp
 .Nm csvprintf
 .Bk -words
+.Fl x
 .Op Fl i
 .Op Fl q Ar char
 .Op Fl s Ar char
 .Op Fl f Ar file
 .Op Fl e Ar enc
-.Fl x
+.Ek
+.Pp
+.Nm csvprintf
+.Bk -words
+.Fl X
+.Op Fl i
+.Op Fl q Ar char
+.Op Fl s Ar char
+.Op Fl f Ar file
+.Op Fl e Ar enc
 .Ek
 .Pp
 .Nm xml2csv
@@ -105,6 +115,13 @@ Convert the CSV input into an XML document.
 If the input character encoding is other than ISO-8859-1, specify using the
 .Fl e
 flag.
+.It Fl X
+Same as
+.Fl x ,
+but it also causes the values in the first row to be used as the XML tag names for the corresponding columns.
+.Pp
+This flag implies
+.Fl i .
 .El
 .Sh CSV FORMAT
 .Nm

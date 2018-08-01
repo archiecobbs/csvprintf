@@ -56,6 +56,10 @@ static int readcol(FILE *fp, struct row *row, int *linenum);
 static int readqcol(FILE *fp, struct col *col, int *linenum);
 static int readuqcol(FILE *fp, struct col *col, int *linenum);
 static int readch(FILE *fp, int collapse);
+static void print_xml_tag_name(const char *tag, int linenum);
+static int decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum);
+static void convert_to_utf8(iconv_t icd, struct row *row, int linenum);
+static const char *escape_xml_char(int uchar);
 static char *eatwidthprec(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
 static char *eataccessor(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
 static void addcolumn(struct row *row, const struct col *col);
@@ -73,16 +77,21 @@ main(int argc, char **argv)
     iconv_t icd = NULL;
     FILE *fp = NULL;
     struct row row;
+    struct row xml_tag_names;
     unsigned int *args = NULL;
     int nargs = 0;
     int file_done;
     int linenum;
-    int xml = 0;
+    int xml = 0;        // 1 = normal, 2 = use first row column names for XML tags
     int skip = 0;
     int ch;
 
+    // Initialize
+    memset(&row, 0, sizeof(row));
+    memset(&xml_tag_names, 0, sizeof(xml_tag_names));
+
     // Parse command line
-    while ((ch = getopt(argc, argv, "e:f:hiq:s:vx")) != -1) {
+    while ((ch = getopt(argc, argv, "e:f:hiq:s:vxX")) != -1) {
         switch (ch) {
         case 'e':
             encoding = optarg;
@@ -95,6 +104,10 @@ main(int argc, char **argv)
             break;
         case 'x':
             xml = 1;
+            break;
+        case 'X':
+            xml = 2;
+            skip = 1;
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -150,7 +163,6 @@ main(int argc, char **argv)
     // Read and parse input
     linenum = 1;
     for (file_done = 0; !file_done; ) {
-        int col;
 
         // Start parsing next row
         switch ((ch = readch(fp, 1))) {
@@ -166,135 +178,65 @@ main(int argc, char **argv)
         }
 
         // Read columns
-        memset(&row, 0, sizeof(row));
         while (readcol(fp, &row, &linenum))
             ;
 
         // Skip first row?
         if (skip) {
             skip = 0;
+            if (xml == 2) {         // copy and save first row for use as XML tag names
+                convert_to_utf8(icd, &row, linenum);
+                memcpy(&xml_tag_names, &row, sizeof(row));
+                memset(&row, 0, sizeof(row));
+            }
             goto next;
         }
 
         // Perform XML encoding
         if (xml) {
+            int col;
+
+            // Convert columns to UTF-8
+            convert_to_utf8(icd, &row, linenum);
+
+            // Output columns for row
             printf("  <row>\n");
             for (col = 0; col < row.num; col++) {
-                char *const ibuf = row.fields[col];
-                char *iptr;
-                char *obuf;
-                char *optr;
-                size_t iremain;
-                size_t oremain;
-                size_t olen;
+                const char *ptr = row.fields[col];
+                int len = strlen(ptr);
+                const char *esc;
+                int uchar;
+                int uclen;
                 int i;
 
-                // Convert value to UTF-8 encoding
-                if (iconv(icd, NULL, NULL, NULL, NULL) == (size_t)-1)
-                    err(1, "iconv");
-                iremain = strlen(ibuf);
-                oremain = 64 + 4 * iremain;
-                if ((obuf = malloc(oremain)) == NULL)
-                    err(1, "malloc");
-                iptr = ibuf;
-                optr = obuf;
-                if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
-                    switch (errno) {
-                    case EILSEQ:
-                    case EINVAL:
-                        errx(1, "line %d: invalid multibyte sequence", linenum);
-                    default:
-                        err(1, "iconv");
-                    }
-                }
-                olen = optr - obuf;
-
                 // Open XML tag
-                printf("    <col%d>", col + 1);
+                printf("    <");
+                if (col < xml_tag_names.num)
+                    print_xml_tag_name(xml_tag_names.fields[col], linenum);
+                else
+                    printf("col%d", col + 1);
+                printf(">");
 
-                // Output XML characters
-                for (i = 0; i < olen; ) {
-                    int uchar;
-                    int uclen;
-                    int j;
-
-                    // Decode UTF-8 character
-                    if ((obuf[i] & 0x80) == 0x00) {
-                        uclen = 1;
-                        uchar = obuf[i] & 0x7f;
-                    } else if ((obuf[i] & 0xe0) == 0xc0 && i + 1 < olen) {
-                        uclen = 2;
-                        uchar = ((obuf[i] & 0x1f) <<  6)
-                          | ((obuf[i + 1] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xf0) == 0xe0 && i + 2 < olen) {
-                        uclen = 3;
-                        uchar = ((obuf[i] & 0x0f) << 12)
-                          | ((obuf[i + 1] & 0x3f) <<  6)
-                          | ((obuf[i + 2] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xf8) == 0xf0 && i + 3 < olen) {
-                        uclen = 4;
-                        uchar = ((obuf[i] & 0x07) << 18)
-                          | ((obuf[i + 1] & 0x3f) << 12)
-                          | ((obuf[i + 2] & 0x3f) <<  6)
-                          | ((obuf[i + 3] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xfc) == 0xf8 && i + 4 < olen) {
-                        uclen = 5;
-                        uchar = ((obuf[i] & 0x03) << 24)
-                          | ((obuf[i + 1] & 0x3f) << 18)
-                          | ((obuf[i + 2] & 0x3f) << 12)
-                          | ((obuf[i + 3] & 0x3f) <<  6)
-                          | ((obuf[i + 4] & 0x3f) <<  0);
-                    } else if ((obuf[i] & 0xfe) == 0xfc && i + 5 < olen) {
-                        uclen = 6;
-                        uchar = ((obuf[i] & 0x01) << 30)
-                          | ((obuf[i + 1] & 0x3f) << 24)
-                          | ((obuf[i + 2] & 0x3f) << 18)
-                          | ((obuf[i + 3] & 0x3f) << 12)
-                          | ((obuf[i + 4] & 0x3f) <<  6)
-                          | ((obuf[i + 5] & 0x3f) <<  0);
-                    } else
-                        errx(1, "line %d: internal error decoding UTF-8: 0x%02x", linenum, obuf[i] & 0xff);
-
-                    // Escape character as needed
-                    switch (uchar) {
-                    case '>':
-                        printf("&gt;");
-                        break;
-                    case '<':
-                        printf("&lt;");
-                        break;
-                    case '&':
-                        printf("&amp;");
-                        break;
-                    case '"':
-                        printf("&quot;");
-                        break;
-                    default:
-
-                        // Pass valid and unrestricted characters through (but not CR)
-                        // http://en.wikipedia.org/wiki/Valid_characters_in_XML
-                        if ((uchar == '\n' || uchar == '\t'
-                            || (uchar >= 0x0020 && uchar <= 0xd7ff)
-                            || (uchar >= 0xe000 && uchar <= 0xfffd)
-                            || (uchar >= 0x10000 && uchar <= 0x10ffff))
-                          && !((uchar >= 0x007f && uchar <= 0x0084) || (uchar >= 0x0086 && uchar <= 0x009F))) {
-                            for (j = 0; j < uclen; j++)
-                                putchar(obuf[i + j]);
-                            break;
-                        }
-
-                        // Escape other characters
-                        printf("&#%u;", uchar);
-                        break;
+                // Output XML characters, escaped as needed
+                while (len > 0) {
+                    uchar = decode_utf8(ptr, len, &uclen, linenum);
+                    if ((esc = escape_xml_char(uchar)) != NULL)
+                        printf("%s", esc);
+                    else {
+                        for (i = 0; i < uclen; i++)
+                            putchar(ptr[i]);
                     }
-
-                    // Advance to next UTF-8 character
-                    i += uclen;
+                    ptr += uclen;
+                    len -= uclen;
                 }
-                free(obuf);
 
                 // Close XML tag
-                printf("</col%d>\n", col + 1);
+                printf("</");
+                if (col < xml_tag_names.num)
+                    print_xml_tag_name(xml_tag_names.fields[col], linenum);
+                else
+                    printf("col%d", col + 1);
+                printf(">\n");
             }
             printf("  </row>\n");
         } else {
@@ -341,10 +283,11 @@ main(int argc, char **argv)
         }
 
 next:
-        // Free memory
+        // Free row memory
         while (row.num > 0)
             free(row.fields[--row.num]);
         free(row.fields);
+        memset(&row, 0, sizeof(row));
     }
 
     // XML closing
@@ -361,6 +304,161 @@ next:
     // Done
     fflush(stdout);
     return 0;
+}
+
+// Output XML tag name, substituting invalid characters
+static void
+print_xml_tag_name(const char *tag, int linenum)
+{
+    int first = 1;
+    int uchar;
+    int uclen;
+    int ok;
+    int i;
+
+    while (*tag != '\0') {
+        uchar = decode_utf8(tag, strlen(tag), &uclen, linenum);
+        if (first) {
+            ok = isalpha(uchar) || uchar == '_';
+            first = 0;
+        } else
+            ok = isalpha(uchar) || isdigit(uchar) || uchar == '_' || uchar == '-' || uchar == '.';
+        if (!ok)
+            putchar('_');
+        else {
+            for (i = 0; i < uclen; i++)
+                putchar(tag[i]);
+        }
+        tag += uclen;
+    }
+}
+
+static const char *
+escape_xml_char(int uchar)
+{
+    static char buf[32];
+
+    switch (uchar) {
+    case '>':
+        return "&gt;";
+        break;
+    case '<':
+        return "&lt;";
+        break;
+    case '&':
+        return "&amp;";
+        break;
+    case '"':
+        return "&quot;";
+        break;
+    default:
+
+        // Pass valid and unrestricted characters through (but not CR)
+        // http://en.wikipedia.org/wiki/Valid_characters_in_XML
+        if ((uchar == '\n' || uchar == '\t'
+            || (uchar >= 0x0020 && uchar <= 0xd7ff)
+            || (uchar >= 0xe000 && uchar <= 0xfffd)
+            || (uchar >= 0x10000 && uchar <= 0x10ffff))
+          && !((uchar >= 0x007f && uchar <= 0x0084) || (uchar >= 0x0086 && uchar <= 0x009F)))
+            return NULL;
+
+        // Escape other characters
+        snprintf(buf, sizeof(buf), "&#%u;", uchar);
+        return buf;
+    }
+}
+
+// Convert row columns to UTF-8 encoding
+static void
+convert_to_utf8(iconv_t icd, struct row *row, int linenum)
+{
+    int col;
+
+    for (col = 0; col < row->num; col++) {
+        char *const ibuf = row->fields[col];
+        char *iptr;
+        char *obuf;
+        char *optr;
+        size_t iremain;
+        size_t oremain;
+        size_t olen;
+
+        // Convert column
+        if (iconv(icd, NULL, NULL, NULL, NULL) == (size_t)-1)
+            err(1, "iconv");
+        iremain = strlen(ibuf);
+        oremain = 64 + 4 * iremain;
+        if ((obuf = malloc(oremain)) == NULL)
+            err(1, "malloc");
+        iptr = ibuf;
+        optr = obuf;
+        if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
+            switch (errno) {
+            case EILSEQ:
+            case EINVAL:
+                errx(1, "line %d: invalid multibyte sequence", linenum);
+            default:
+                err(1, "iconv");
+            }
+        }
+        olen = optr - obuf;
+
+        // Replace column
+        if ((row->fields[col] = realloc(row->fields[col], olen + 1)) == NULL)
+            err(1, "realloc");
+        memcpy(row->fields[col], obuf, olen);
+        row->fields[col][olen] = '\0';
+        free(obuf);
+    }
+}
+
+// Decode UTF-8 character
+static int
+decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum)
+{
+    int uchar;
+    int uclen;
+    int i = 0;
+
+    if ((obuf[i] & 0x80) == 0x00) {
+        uclen = 1;
+        uchar = obuf[i] & 0x7f;
+    } else if ((obuf[i] & 0xe0) == 0xc0 && i + 1 < olen) {
+        uclen = 2;
+        uchar = ((obuf[i] & 0x1f) <<  6)
+          | ((obuf[i + 1] & 0x3f) <<  0);
+    } else if ((obuf[i] & 0xf0) == 0xe0 && i + 2 < olen) {
+        uclen = 3;
+        uchar = ((obuf[i] & 0x0f) << 12)
+          | ((obuf[i + 1] & 0x3f) <<  6)
+          | ((obuf[i + 2] & 0x3f) <<  0);
+    } else if ((obuf[i] & 0xf8) == 0xf0 && i + 3 < olen) {
+        uclen = 4;
+        uchar = ((obuf[i] & 0x07) << 18)
+          | ((obuf[i + 1] & 0x3f) << 12)
+          | ((obuf[i + 2] & 0x3f) <<  6)
+          | ((obuf[i + 3] & 0x3f) <<  0);
+    } else if ((obuf[i] & 0xfc) == 0xf8 && i + 4 < olen) {
+        uclen = 5;
+        uchar = ((obuf[i] & 0x03) << 24)
+          | ((obuf[i + 1] & 0x3f) << 18)
+          | ((obuf[i + 2] & 0x3f) << 12)
+          | ((obuf[i + 3] & 0x3f) <<  6)
+          | ((obuf[i + 4] & 0x3f) <<  0);
+    } else if ((obuf[i] & 0xfe) == 0xfc && i + 5 < olen) {
+        uclen = 6;
+        uchar = ((obuf[i] & 0x01) << 30)
+          | ((obuf[i + 1] & 0x3f) << 24)
+          | ((obuf[i + 2] & 0x3f) << 18)
+          | ((obuf[i + 3] & 0x3f) << 12)
+          | ((obuf[i + 4] & 0x3f) <<  6)
+          | ((obuf[i + 5] & 0x3f) <<  0);
+    } else
+        errx(1, "line %d: internal error decoding UTF-8: 0x%02x", linenum, obuf[i] & 0xff);
+
+    // Done
+    *lenp = uclen;
+    return uchar;
 }
 
 static int
