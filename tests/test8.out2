@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<csv>
+  <row>
+    <ColA>aaa</ColA>
+    <ColB>bbb</ColB>
+    <ColC>ccc</ColC>
+  </row>
+  <row>
+    <ColA>aaa</ColA>
+    <ColB>bbb</ColB>
+  </row>
+  <row>
+    <ColA>aaa</ColA>
+    <ColB>bbb</ColB>
+    <ColC>ccc</ColC>
+    <col4>ddd</col4>
+  </row>
+</csv>
