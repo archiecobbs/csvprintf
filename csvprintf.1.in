@@ -2,7 +2,7 @@
 .\"
 .\" csvprintf - Simple CSV file parser for the UNIX command line
 .\"
-.\" Copyright 2010 Archie L. Cobbs <archie@dellroad.org>
+.\" Copyright 2010 Archie L. Cobbs <archie.cobbs@gmail.com>
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License"); you may
 .\" not use this file except in compliance with the License. You may obtain
@@ -43,7 +43,6 @@
 .Nm csvprintf
 .Bk -words
 .Fl X
-.Op Fl i
 .Op Fl q Ar char
 .Op Fl s Ar char
 .Op Fl f Ar file
@@ -70,9 +69,11 @@ Each format specifier in the format string is required to start with a column ac
 The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
 .Xr printf 1 ) .
 So for example,
-``%3$d''
+.Pa %3$d
 would format the third CSV column as a decimal value.
-In addition, the ``%0$d'' specifier will print the number of columns in the record.
+In addition, the
+.Pa %0$d
+specifier will print the number of columns in the record.
 .Pp
 Under the hood,
 .Nm
@@ -150,4 +151,4 @@ XSL transform that converts XML back into CSV format.
 .%O http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm
 .Re
 .Sh AUTHOR
-.An Archie L. Cobbs Aq archie@dellroad.org
+.An Archie L. Cobbs Aq archie.cobbs@gmail.com
