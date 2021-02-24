@@ -297,6 +297,7 @@ next:
     // Clean up
     if (fp != stdin)
         fclose(fp);
+    freerow(&xml_tag_names);
     free(args);
 
     // Done
