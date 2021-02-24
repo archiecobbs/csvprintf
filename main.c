@@ -78,7 +78,7 @@ main(int argc, char **argv)
     iconv_t icd = NULL;
     FILE *fp = NULL;
     struct row row;
-    struct row xml_tag_names;
+    struct row column_names;
     unsigned int *args = NULL;
     int nargs = 0;
     int file_done;
@@ -89,7 +89,7 @@ main(int argc, char **argv)
 
     // Initialize
     memset(&row, 0, sizeof(row));
-    memset(&xml_tag_names, 0, sizeof(xml_tag_names));
+    memset(&column_names, 0, sizeof(column_names));
 
     // Parse command line
     while ((ch = getopt(argc, argv, "e:f:hiq:s:vxX")) != -1) {
@@ -187,7 +187,7 @@ main(int argc, char **argv)
             skip = 0;
             if (xml == 2) {         // copy and save first row for use as XML tag names
                 convert_to_utf8(icd, &row, linenum);
-                memcpy(&xml_tag_names, &row, sizeof(row));
+                memcpy(&column_names, &column_names, sizeof(column_names));
                 memset(&row, 0, sizeof(row));
             }
             goto next;
@@ -212,8 +212,8 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (col < xml_tag_names.num)
-                    print_xml_tag_name(xml_tag_names.fields[col], linenum);
+                if (col < column_names.num)
+                    print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
                 printf(">");
@@ -233,8 +233,8 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (col < xml_tag_names.num)
-                    print_xml_tag_name(xml_tag_names.fields[col], linenum);
+                if (col < column_names.num)
+                    print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
                 printf(">\n");
@@ -297,7 +297,7 @@ next:
     // Clean up
     if (fp != stdin)
         fclose(fp);
-    freerow(&xml_tag_names);
+    freerow(&column_names);
     free(args);
 
     // Done
