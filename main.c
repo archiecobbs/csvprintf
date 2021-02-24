@@ -56,6 +56,7 @@ static int readcol(FILE *fp, struct row *row, int *linenum);
 static int readqcol(FILE *fp, struct col *col, int *linenum);
 static int readuqcol(FILE *fp, struct col *col, int *linenum);
 static int readch(FILE *fp, int collapse);
+static void freerow(struct row *row);
 static void print_xml_tag_name(const char *tag, int linenum);
 static int decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum);
 static void convert_to_utf8(iconv_t icd, struct row *row, int linenum);
@@ -284,10 +285,7 @@ main(int argc, char **argv)
 
 next:
         // Free row memory
-        while (row.num > 0)
-            free(row.fields[--row.num]);
-        free(row.fields);
-        memset(&row, 0, sizeof(row));
+        freerow(&row);
     }
 
     // XML closing
@@ -773,6 +771,15 @@ readch(FILE *fp, int collapse)
         }
     }
     return ch;
+}
+
+static void
+freerow(struct row *row)
+{
+    while (row->num > 0)
+        free(row->fields[--row->num]);
+    free(row->fields);
+    memset(row, 0, sizeof(*row));
 }
 
 static void
