@@ -19,7 +19,7 @@
 .Os
 .Sh NAME
 .Nm csvprintf
-.Nd Simple CSV file parser for the UNIX command line
+.Nd CSV file parser
 .Sh SYNOPSIS
 .Nm csvprintf
 .Bk -words
@@ -60,38 +60,37 @@ is a simple UNIX command line utility for parsing CSV files.
 .Nm
 works like the
 .Xr printf 1
-command line utility.
-You supply a
+command line utility: you supply a
 .Xr printf 1
-format string on the command line and each record of the CSV file is formatted accordingly.
-Each format specifier in the format string is required to start with a column accessor to specify which CSV column to use.
+format string on the command line, and each row of the CSV file is split into arguments and formatted accordingly.
+The format specifiers in the format string contain numeric or symbolic column accessors to specify which CSV column to format.
 .Pp
-The column accessor is a sequence of decimal digits followed by the ``$'' character (the same accessor format supported by
+A numeric column accessor is a sequence of decimal digits followed by the
+.Pa $
+character (the same accessor format supported by
 .Xr printf 1 ) .
 So for example,
-.Pa %3$d
+.Pa \(dq%3$d\(dq
 would format the third CSV column as a decimal value.
 In addition, the
-.Pa %0$d
+.Pa \(dq%0$d\(dq
 specifier will print the number of columns in the record.
 .Pp
 When the
 .Fl i
-flag is given, the first row is assumed to contain column names,
-and these may be used enclosed in curly braces instead of positional column accessors to specify the column to format.
+flag is given, the first row is assumed to contain column names and is not output.
+This allows symbolic, instead of numeric, column accessors to be used.
+A symbolic column accessor is the column name enclosed in curly braces.
 .Pp
 For example, if the first row is
 .Pa FirstName,Lastname,IdNum
 then the format string
-.Pa "%{IdNum}04d: %{LastName}s, %{FirstName}s"
-is equivalent to the format string
-.Pa "%3$04d: %2$s, %1$s" .
+.Pa \(dq%{IdNum}04d: %{LastName}s, %{FirstName}s\(dq
+would be equivalent to the format string
+.Pa \(dq%3$04d: %2$s, %1$s\(dq .
 .Pp
-Under the hood,
-.Nm
-invokes the
-.Xr printf 1
-executable on each CSV row it parses.
+Specifying a column name that does not appear in the first row generates an error,
+so the use of symbolic column accessors adds an extra consistency check.
 .Pp
 .Nm
 can also convert CSV files into XML documents.
@@ -106,12 +105,13 @@ By default, ISO-8859-1 is assumed.
 This option only affects XML mode.
 .It Fl f
 Read CSV input from the specified file.
+.Pp
 By default (or if ``-'' is specified),
 .Nm
 reads from standard input.
 .It Fl i
-Assume the very first CSV record in the input contains column names,
-and enable column name argument specifiers in the format string.
+Assume the first CSV record contains column names.
+Enable symbolic column accessors and omit that first record from the output.
 .It Fl q
 Specify an alternate CSV column quote character.
 The usual backslash escape sequences are accepted.
@@ -152,6 +152,13 @@ fails, processing stops and that exit value is returned.
 .It Pa @pkgdatadir@/csv.xsl
 XSL transform that converts XML back into CSV format.
 .El
+.Sh BUGS
+.Pp
+Under the hood,
+.Nm
+invokes the
+.Xr printf 1
+executable on each CSV row it parses, which makes it relatively slow.
 .Sh SEE ALSO
 .Xr printf 1 ,
 .Xr printf 3 .
