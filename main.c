@@ -829,22 +829,21 @@ usage(void)
 {
 
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  csvprintf [-i] [-q char] [-s char] [-f file] format\n");
-    fprintf(stderr, "  csvprintf [-i] [-q char] [-s char] [-f file] -x\n");
+    fprintf(stderr, "  csvprintf [options] format\n");
+    fprintf(stderr, "  csvprintf -x [options]\n");
+    fprintf(stderr, "  csvprintf -X [options]\n");
     fprintf(stderr, "  csvprintf -h\n");
     fprintf(stderr, "  csvprintf -v\n");
-//    fprintf(stderr, "\n");
-//    fprintf(stderr, "The `format' is a printf(1) format string with printf(3)-style `%%N$'\n");
-//    fprintf(stderr, "column accessors; `%%0$d' retrieves the number of CSV fields in the row.\n");
-//    fprintf(stderr, "\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -f\tRead CSV input from specified file (default stdin)\n");
-    fprintf(stderr, "  -i\tSkip over the first record in the CSV input\n");
-    fprintf(stderr, "  -q\tSpecify quote character (default `%c')\n", DEFAULT_QUOTE_CHAR);
-    fprintf(stderr, "  -s\tSpecify field separator character (default `%c')\n", DEFAULT_FSEP_CHAR);
-    fprintf(stderr, "  -x\tConvert input to XML (assumes ISO-8859-1 encoding of fields)\n");
-    fprintf(stderr, "  -h\tOutput this help message and exit\n");
-    fprintf(stderr, "  -v\tOutput version information and exit\n");
+    fprintf(stderr, "  -e encoding\tSpecify input character encoding (XML mode only; default ISO-8859-1)\n");
+    fprintf(stderr, "  -f input\tRead CSV input from specified file (default stdin)\n");
+    fprintf(stderr, "  -i\t\tAssume the first CSV record contains column names\n");
+    fprintf(stderr, "  -q char\tSpecify quote character (default `%c')\n", DEFAULT_QUOTE_CHAR);
+    fprintf(stderr, "  -s char\tSpecify field separator character (default `%c')\n", DEFAULT_FSEP_CHAR);
+    fprintf(stderr, "  -x\t\tConvert input to XML using numeric tags\n");
+    fprintf(stderr, "  -X\t\tConvert input to XML using column name tags (implies \"-i\")\n");
+    fprintf(stderr, "  -h\t\tOutput this help message and exit\n");
+    fprintf(stderr, "  -v\t\tOutput version information and exit\n");
 }
 
 static void
@@ -852,7 +851,7 @@ version(void)
 {
     fprintf(stderr, "%s version %s (%s)\n", PACKAGE_TARNAME, PACKAGE_VERSION, csvprintf_version);
     fprintf(stderr, "Copyright (C) 2010 Archie L. Cobbs\n");
-    fprintf(stderr, "This is free software; see the source for copying conditions.  There is NO\n");
+    fprintf(stderr, "This is free software; see the source for copying conditions. There is NO\n");
     fprintf(stderr, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
 }
 
