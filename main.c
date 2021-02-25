@@ -51,7 +51,7 @@ static int quote = DEFAULT_QUOTE_CHAR;
 static int fsep = DEFAULT_FSEP_CHAR;
 
 static int parsechar(const char *str);
-static int parsefmt(char *fmt, unsigned int **argsp);
+static int parsefmt(char *fmt, const struct row *column_names, unsigned int **argsp);
 static int readcol(FILE *fp, struct row *row, int *linenum);
 static int readqcol(FILE *fp, struct col *col, int *linenum);
 static int readuqcol(FILE *fp, struct col *col, int *linenum);
@@ -61,8 +61,10 @@ static void print_xml_tag_name(const char *tag, int linenum);
 static int decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum);
 static void convert_to_utf8(iconv_t icd, struct row *row, int linenum);
 static const char *escape_xml_char(int uchar);
-static char *eatwidthprec(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
-static char *eataccessor(const char *fspec, const char *desc, char *s, int *nargs, unsigned int *args);
+static char *eatwidthprec(const char *fspec, const char *desc, const struct row *column_names,
+    char *s, int *nargs, unsigned int *args);
+static char *eataccessor(const char *fspec, const char *desc, const struct row *column_names,
+    char *s, int *nargs, unsigned int *args);
 static void addcolumn(struct row *row, const struct col *col);
 static void addchar(struct col *col, int ch);
 static void trim(struct col *col);
@@ -80,11 +82,12 @@ main(int argc, char **argv)
     struct row row;
     struct row column_names;
     unsigned int *args = NULL;
+    int read_column_names = 0;
+    int first_row = 0;
     int nargs = 0;
     int file_done;
     int linenum;
     int xml = 0;        // 1 = normal, 2 = use first row column names for XML tags
-    int skip = 0;
     int ch;
 
     // Initialize
@@ -101,14 +104,14 @@ main(int argc, char **argv)
             input = optarg;
             break;
         case 'i':
-            skip = 1;
+            read_column_names = 1;
             break;
         case 'x':
             xml = 1;
             break;
         case 'X':
+            read_column_names = 1;
             xml = 2;
-            skip = 1;
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -141,10 +144,13 @@ main(int argc, char **argv)
     if (quote == fsep)
         err(1, "quote and field separators cannot be the same character");
 
-    // Parse format string
+    // Get and (maybe) parse format string (non-XML only)
     if (!xml) {
         format = argv[0];
-        nargs = parsefmt(format, &args);
+
+        // Parse format string - unless we need to defer
+        if (!read_column_names)
+            nargs = parsefmt(format, NULL, &args);
     }
 
     // Open input
@@ -163,6 +169,7 @@ main(int argc, char **argv)
 
     // Read and parse input
     linenum = 1;
+    first_row = 1;
     for (file_done = 0; !file_done; ) {
 
         // Start parsing next row
@@ -182,14 +189,18 @@ main(int argc, char **argv)
         while (readcol(fp, &row, &linenum))
             ;
 
-        // Skip first row?
-        if (skip) {
-            skip = 0;
-            if (xml == 2) {         // copy and save first row for use as XML tag names
+        // Gather column names from first row, if configured
+        if (first_row && read_column_names) {
+            if (xml)
                 convert_to_utf8(icd, &row, linenum);
-                memcpy(&column_names, &column_names, sizeof(column_names));
-                memset(&row, 0, sizeof(row));
-            }
+            memcpy(&column_names, &row, sizeof(row));
+            memset(&row, 0, sizeof(row));
+
+            // If we had to defer parsing format string until we had the column names, do that now
+            if (!xml)
+                nargs = parsefmt(format, &column_names, &args);
+
+            // Proceed
             goto next;
         }
 
@@ -212,7 +223,7 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (col < column_names.num)
+                if (xml == 2 && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -233,7 +244,7 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (col < column_names.num)
+                if (xml == 2 && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -286,6 +297,7 @@ main(int argc, char **argv)
 next:
         // Free row memory
         freerow(&row);
+        first_row = 0;
     }
 
     // XML closing
@@ -632,7 +644,7 @@ addcolumn(struct row *row, const struct col *col)
 }
 
 static int
-parsefmt(char *fmt, unsigned int **argsp)
+parsefmt(char *fmt, const struct row *column_names, unsigned int **argsp)
 {
     unsigned int *args;
     int nargs;
@@ -654,12 +666,12 @@ parsefmt(char *fmt, unsigned int **argsp)
         char *const fspec = s;
         if (*s != '%' || *++s == '%')
             continue;
-        s = eataccessor(fspec, "format specification", s, &nargs, args);
+        s = eataccessor(fspec, "format specification", column_names, s, &nargs, args);
         while (*s != '\0' && strchr("#-+ 0", *s) != NULL)       // eat up optional flags
             s++;
-        s = eatwidthprec(fspec, "field width for format specification", s, &nargs, args);
+        s = eatwidthprec(fspec, "field width for format specification", column_names, s, &nargs, args);
         if (*s == '.')
-            s = eatwidthprec(fspec, "precision for format specification", s + 1, &nargs, args);
+            s = eatwidthprec(fspec, "precision for format specification", column_names, s + 1, &nargs, args);
         if (*s == '\0')
             errx(1, "truncated format specification starting at `%.20s...'", fspec);
     }
@@ -734,27 +746,54 @@ parsechar(const char *str)
 }
 
 static char *
-eatwidthprec(const char *const fspec, const char *desc, char *s, int *nargs, unsigned int *args)
+eatwidthprec(const char *const fspec, const char *desc, const struct row *column_names, char *s, int *nargs, unsigned int *args)
 {
     if (*s == '*')
-        return eataccessor(fspec, desc, s + 1, nargs, args);
+        return eataccessor(fspec, desc, column_names, s + 1, nargs, args);
     while (isdigit(*s))                                         // eat up numerical field width or precision
         s++;
     return s;
 }
 
 static char *
-eataccessor(const char *const fspec, const char *desc, char *s, int *nargs, unsigned int *args)
+eataccessor(const char *const fspec, const char *desc, const struct row *column_names, char *s, int *nargs, unsigned int *args)
 {
     char *const start = s;
+    const char *colname;
+    int namelen;
+    int argnum;
+    int i;
 
-    while (isdigit(*s))
-        s++;
-    if (s == start || *s != '$')
-        errx(1, "missing required column accessor in %s starting at `%.20s...'", desc, fspec);
-    sscanf(start, "%u", args + *nargs);
-    (*nargs)++;
-    memmove(start, s + 1, strlen(s));
+    if (*s == '{') {
+        if (column_names == NULL)
+            errx(1, "column name column accessors requires \"-i\" flag in %s starting at `%.20s...'", desc, fspec);
+        colname = ++s;
+        while (*s != '}') {
+            if (*s++ == '\0')
+                errx(1, "malformed column accessor in %s starting at `%.20s...'", desc, fspec);
+        }
+        namelen = s++ - colname;
+        argnum = 0;
+        for (i = 0; i < column_names->num; i++) {
+            if (strncmp(colname, column_names->fields[i], namelen) == 0 && column_names->fields[i][namelen] == '\0') {
+                if (argnum != 0) {
+                    errx(1, "ambiguous duplicated column name \"%.*s\" in column accessor in %s starting at `%.20s...'",
+                      namelen, colname, desc, fspec);
+                }
+                argnum = i + 1;
+            }
+        }
+        if (argnum == 0)
+            errx(1, "unknown column name \"%.*s\" in column accessor in %s starting at `%.20s...'", namelen, colname, desc, fspec);
+        args[(*nargs)++] = argnum;
+    } else {
+        while (isdigit(*s))
+            s++;
+        if (s == start || *s++ != '$')
+            errx(1, "missing required column accessor in %s starting at `%.20s...'", desc, fspec);
+        sscanf(start, "%u", &args[(*nargs)++]);
+    }
+    memmove(start, s, strlen(s) + 1);
     return start;
 }
 

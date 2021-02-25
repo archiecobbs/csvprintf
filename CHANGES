@@ -1,3 +1,7 @@
+Version Next
+
+    - Added support for format strings containing column names
+
 Version 1.0.4 released August 1, 2018
 
     - Fixed "unexpected character" bug when line ends with QUOTE, CR

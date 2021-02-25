@@ -75,6 +75,18 @@ In addition, the
 .Pa %0$d
 specifier will print the number of columns in the record.
 .Pp
+When the
+.Fl i
+flag is given, the first row is assumed to contain column names,
+and these may be used enclosed in curly braces instead of positional column accessors to specify the column to format.
+.Pp
+For example, if the first row is
+.Pa FirstName,Lastname,IdNum
+then the format string
+.Pa "%{IdNum}04d: %{LastName}s, %{FirstName}s"
+is equivalent to the format string
+.Pa "%3$04d: %2$s, %1$s" .
+.Pp
 Under the hood,
 .Nm
 invokes the
@@ -98,7 +110,8 @@ By default (or if ``-'' is specified),
 .Nm
 reads from standard input.
 .It Fl i
-Ignore the very first CSV record in the input (typically contains column names).
+Assume the very first CSV record in the input contains column names,
+and enable column name argument specifiers in the format string.
 .It Fl q
 Specify an alternate CSV column quote character.
 The usual backslash escape sequences are accepted.
