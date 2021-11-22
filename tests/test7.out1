@@ -3,7 +3,7 @@
   <row>
     <col1>Name With Spaces</col1>
     <col2>#~!@#$%^&amp;*()</col2>
-    <col3>&amp;&lt;&gt;&amp;</col3>
+    <col3>&amp;&lt;&gt;&amp;"\</col3>
   </row>
   <row>
     <col1>aaa</col1>
