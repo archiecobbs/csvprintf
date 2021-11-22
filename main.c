@@ -406,10 +406,11 @@ convert_to_utf8(iconv_t icd, struct row *row, int linenum)
         if (iconv(icd, &iptr, &iremain, &optr, &oremain) == (size_t)-1) {
             switch (errno) {
             case EILSEQ:
+                errx(1, "line %d: %s multibyte sequence", linenum, "illegal");
             case EINVAL:
-                errx(1, "line %d: invalid multibyte sequence", linenum);
+                errx(1, "line %d: %s multibyte sequence", linenum, "truncated");
             default:
-                err(1, "iconv");
+                err(1, "line %d: iconv", linenum);
             }
         }
         olen = optr - obuf;
