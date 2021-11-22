@@ -35,6 +35,10 @@
 #define DEFAULT_FSEP_CHAR       ','
 #define XML_OUTPUT_ENCODING     "UTF-8"
 
+#define MODE_NORMAL             0           // normal mode
+#define MODE_XML                1           // XML mode
+#define MODE_JSON               2           // JSON mode
+
 struct col {
     char    *buf;
     size_t  len;
@@ -58,6 +62,7 @@ static int readuqcol(FILE *fp, struct col *col, int *linenum);
 static int readch(FILE *fp, int collapse);
 static void freerow(struct row *row);
 static void print_xml_tag_name(const char *tag, int linenum);
+static void print_json_string(const char *string, int linenum);
 static int decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum);
 static void convert_to_utf8(iconv_t icd, struct row *row, int linenum);
 static const char *escape_xml_char(int uchar);
@@ -82,12 +87,12 @@ main(int argc, char **argv)
     struct row row;
     struct row column_names;
     unsigned int *args = NULL;
+    int mode = -1;
     int read_column_names = 0;
     int first_row = 0;
     int nargs = 0;
     int file_done;
     int linenum;
-    int xml = 0;        // 1 = normal, 2 = use first row column names for XML tags
     int ch;
 
     // Initialize
@@ -95,7 +100,7 @@ main(int argc, char **argv)
     memset(&column_names, 0, sizeof(column_names));
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "e:f:hiq:s:vxX")) != -1) {
+    while ((ch = getopt(argc, argv, "e:f:hijq:s:vxX")) != -1) {
         switch (ch) {
         case 'e':
             encoding = optarg;
@@ -106,12 +111,21 @@ main(int argc, char **argv)
         case 'i':
             read_column_names = 1;
             break;
+        case 'j':
+            if (mode != -1 && mode != MODE_JSON)
+                errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
+            mode = MODE_JSON;
+            break;
         case 'x':
-            xml = 1;
+            if (mode != -1 && !(mode == MODE_XML && !read_column_names))
+                errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
+            mode = MODE_XML;
             break;
         case 'X':
+            if (mode != -1 && !(mode == MODE_XML && read_column_names))
+                errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
+            mode = MODE_XML;
             read_column_names = 1;
-            xml = 2;
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -133,9 +147,11 @@ main(int argc, char **argv)
             exit(1);
         }
     }
+    if (mode == -1)
+        mode = MODE_NORMAL;
     argc -= optind;
     argv += optind;
-    if (argc != (xml ? 0 : 1)) {
+    if (argc != (mode == MODE_NORMAL ? 1 : 0)) {
         usage();
         exit(1);
     }
@@ -144,8 +160,8 @@ main(int argc, char **argv)
     if (quote == fsep)
         err(1, "quote and field separators cannot be the same character");
 
-    // Get and (maybe) parse format string (non-XML only)
-    if (!xml) {
+    // Get and (maybe) parse format string (normal mode only)
+    if (mode == MODE_NORMAL) {
         format = argv[0];
 
         // Parse format string - unless we need to defer
@@ -159,10 +175,14 @@ main(int argc, char **argv)
     else if ((fp = fopen(input, "r")) == NULL)
         err(1, "%s", input);
 
-    // XML opening
-    if (xml) {
+    // Initialize iconv
+    if (mode != MODE_NORMAL) {
         if ((icd = iconv_open(XML_OUTPUT_ENCODING, encoding)) == (iconv_t)-1)
             err(1, "%s", encoding);
+    }
+
+    // XML opening
+    if (mode == MODE_XML) {
         printf("<?xml version=\"1.0\" encoding=\"%s\"?>\n", XML_OUTPUT_ENCODING);
         printf("<csv>\n");
     }
@@ -191,21 +211,69 @@ main(int argc, char **argv)
 
         // Gather column names from first row, if configured
         if (first_row && read_column_names) {
-            if (xml)
+
+            // Convert to UTF-8 if needed
+            if (mode != MODE_NORMAL)
                 convert_to_utf8(icd, &row, linenum);
+
+            // Save column names
             memcpy(&column_names, &row, sizeof(row));
             memset(&row, 0, sizeof(row));
 
             // If we had to defer parsing format string until we had the column names, do that now
-            if (!xml)
+            if (mode == MODE_NORMAL)
                 nargs = parsefmt(format, &column_names, &args);
+
+            // For JSON object notation, fail if any column names are duplicated
+            if (mode == MODE_JSON) {
+                int i, j;
+
+                for (i = 0; i < column_names.num - 1; i++) {
+                    for (j = i + 1; j < column_names.num; j++) {
+                        if (strcmp(column_names.fields[i], column_names.fields[j]) == 0)
+                            errx(1, "duplicate column name \"%s\"", column_names.fields[i]);
+                    }
+                }
+            }
 
             // Proceed
             goto next;
         }
 
-        // Perform XML encoding
-        if (xml) {
+        // Handle data row
+        switch (mode) {
+        case MODE_JSON:
+          {
+            int col;
+
+            // Convert columns to UTF-8
+            convert_to_utf8(icd, &row, linenum);
+
+            // Output row
+            printf("\x1e%c", read_column_names ? '{' : '[');
+            for (col = 0; col < row.num; col++) {
+
+                // Add comma if needed
+                if (col > 0)
+                    putchar(',');
+
+                // Add column name (if using object notation)
+                if (read_column_names) {
+                    if (col < column_names.num)
+                        print_json_string(column_names.fields[col], linenum);
+                    else
+                        printf("\"col%d\"", col + 1);
+                    putchar(':');
+                }
+
+                // Add column value
+                print_json_string(row.fields[col], linenum);
+            }
+            printf("%c\n", read_column_names ? '}' : ']');
+            break;
+          }
+        case MODE_XML:
+          {
             int col;
 
             // Convert columns to UTF-8
@@ -223,7 +291,7 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (xml == 2 && col < column_names.num)
+                if (read_column_names && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -244,14 +312,17 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (xml == 2 && col < column_names.num)
+                if (read_column_names && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
                 printf(">\n");
             }
             printf("  </row>\n");
-        } else {
+            break;
+          }
+        case MODE_NORMAL:
+          {
             char ncolbuf[32];
             char empty[] = { '\0' };
             pid_t pid;
@@ -292,6 +363,10 @@ main(int argc, char **argv)
                 }
                 break;
             }
+            break;
+          }
+        default:
+            errx(1, "internal error");
         }
 
 next:
@@ -301,10 +376,12 @@ next:
     }
 
     // XML closing
-    if (xml) {
+    if (mode == MODE_XML)
         printf("</csv>\n");
+
+    // Clean up iconv
+    if (mode != MODE_NORMAL)
         (void)iconv_close(icd);
-    }
 
     // Clean up
     if (fp != stdin)
@@ -374,6 +451,50 @@ escape_xml_char(int uchar)
         snprintf(buf, sizeof(buf), "&#%u;", uchar);
         return buf;
     }
+}
+
+// Output JSON string
+static void
+print_json_string(const char *string, int linenum)
+{
+    int uchar;
+    int uclen;
+
+    putchar('"');
+    while (*string != '\0') {
+        uchar = decode_utf8(string, strlen(string), &uclen, linenum);
+        switch (uchar) {
+        case '"':
+            printf("\\\"");
+            break;
+        case '\\':
+            printf("\\\\");
+            break;
+        case '\b':
+            printf("\\b");
+            break;
+        case '\f':
+            printf("\\f");
+            break;
+        case '\n':
+            printf("\\n");
+            break;
+        case '\r':
+            printf("\\r");
+            break;
+        case '\t':
+            printf("\\t");
+            break;
+        default:
+            if (isprint(uchar))
+                printf("%c", uchar);
+            else
+                printf("\\u%04x", uchar);
+            break;
+        }
+        string += uclen;
+    }
+    putchar('"');
 }
 
 // Convert row columns to UTF-8 encoding
@@ -828,14 +949,16 @@ usage(void)
 
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  csvprintf [options] format\n");
+    fprintf(stderr, "  csvprintf -j [options]\n");
     fprintf(stderr, "  csvprintf -x [options]\n");
     fprintf(stderr, "  csvprintf -X [options]\n");
     fprintf(stderr, "  csvprintf -h\n");
     fprintf(stderr, "  csvprintf -v\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -e encoding\tSpecify input character encoding (XML mode only; default ISO-8859-1)\n");
+    fprintf(stderr, "  -e encoding\tSpecify input character encoding (XML and JSON modes only; default ISO-8859-1)\n");
     fprintf(stderr, "  -f input\tRead CSV input from specified file (default stdin)\n");
     fprintf(stderr, "  -i\t\tAssume the first CSV record contains column names\n");
+    fprintf(stderr, "  -j\t\tConvert input to JSON text sequences\n");
     fprintf(stderr, "  -q char\tSpecify quote character (default `%c')\n", DEFAULT_QUOTE_CHAR);
     fprintf(stderr, "  -s char\tSpecify field separator character (default `%c')\n", DEFAULT_FSEP_CHAR);
     fprintf(stderr, "  -x\t\tConvert input to XML using numeric tags\n");
