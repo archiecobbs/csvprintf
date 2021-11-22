@@ -359,9 +359,6 @@ escape_xml_char(int uchar)
     case '&':
         return "&amp;";
         break;
-    case '"':
-        return "&quot;";
-        break;
     default:
 
         // Pass valid and unrestricted characters through (but not CR)

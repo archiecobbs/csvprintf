@@ -1,3 +1,7 @@
+Version Next
+
+    - Stop escaping double quote as "&quot;" in plain XML text.
+
 Version 1.1.0 released February 25, 2021
 
     - Added support for format strings containing column names
