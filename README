@@ -7,7 +7,7 @@ the format string contains a column accessor to specify which CSV
 column to use, so for example '%3$d' would format the third column
 as a decimal value.
 
-csvprintf can also convert CSV files into XML documents.
+csvprintf can also convert CSV files into XML and JSON documents.
 
 See INSTALL for installation instructions.
 

@@ -2,7 +2,7 @@
 
 **cvsprintf** works just like the `printf(1)` command line utility. You supply a `printf(1)` format string on the command line and each record in the CSV file is formatted accordingly. Each format specifier in the format string contains a column accessor to specify which CSV column to use, so for example `%3$d` would format the third column as a decimal value.
 
-**csvprintf** can also convert CSV files into XML documents.
+**csvprintf** can also convert CSV files into XML and JSON documents.
 
 You can view the [ManPage](https://github.com/archiecobbs/csvprintf/wiki/ManPage) online.
 
@@ -32,19 +32,19 @@ Points:  999999.00
 An example of the XML output:
 
 ```
-$ cat input.csv | csvprintf -ix
+$ cat input.csv | csvprintf -iX
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <csv>
   <row>
-    <col1>Fred Smith</col1>
-    <col2>1234 Main St.
-Anytown, USA   39103</col2>
-    <col3>123.4567</col3>
+    <NAME>Fred Smith</NAME>
+    <ADDRESS>1234 Main St.
+Anytown, USA   39103</ADDRESS>
+    <POINTS>123.4567</POINTS>
   </row>
   <row>
-    <col1>Wayne &quot;The Great One&quot; Gretsky</col1>
-    <col2>59 Hockey Lane</col2>
-    <col3>999999</col3>
+    <NAME>Wayne "The Great One" Gretsky</NAME>
+    <ADDRESS>59 Hockey Lane</ADDRESS>
+    <POINTS>999999</POINTS>
   </row>
 </csv>
 ```
