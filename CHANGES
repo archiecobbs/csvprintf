@@ -1,3 +1,7 @@
+Version Next
+
+    - Fixed bug where "-x" flag was behaving like "-X"
+
 Version 1.2.0 released November 22, 2021
 
     - Added "-j" flag for JSON text sequence document output.

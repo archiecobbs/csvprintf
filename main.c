@@ -89,6 +89,7 @@ main(int argc, char **argv)
     unsigned int *args = NULL;
     int mode = -1;
     int read_column_names = 0;
+    int column_name_tags = 0;
     int first_row = 0;
     int nargs = 0;
     int file_done;
@@ -117,14 +118,15 @@ main(int argc, char **argv)
             mode = MODE_JSON;
             break;
         case 'x':
-            if (mode != -1 && !(mode == MODE_XML && !read_column_names))
+            if (mode != -1 && !(mode == MODE_XML && !column_name_tags))
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_XML;
             break;
         case 'X':
-            if (mode != -1 && !(mode == MODE_XML && read_column_names))
+            if (mode != -1 && !(mode == MODE_XML && column_name_tags))
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_XML;
+            column_name_tags = 1;
             read_column_names = 1;
             break;
         case 'q':
@@ -291,7 +293,7 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (read_column_names && col < column_names.num)
+                if (column_name_tags && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -312,7 +314,7 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (read_column_names && col < column_names.num)
+                if (column_name_tags && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
