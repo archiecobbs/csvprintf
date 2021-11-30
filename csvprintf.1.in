@@ -114,13 +114,13 @@ Otherwise, column values are copied from input to output without interpretation.
 .Pp
 This behavior is compatible with ASCII, ISO-8859-1, UTF-8, etc., but not multi-byte encodings such as UTF-16, which must be re-encoded first.
 .Pp
-In XML mode, column values must be interpreted according to an assumed character encoding, which is configured by the
+In XML and JSON modes, column values must be interpreted according to an assumed character encoding which is configured by the
 .Fl e
 flag.
 .Sh OPTIONS
 .Bl -tag -width Ds
 .It Fl e
-Specify input character encoding for XML mode.
+Specify input character encoding for XML or JSON mode.
 .Pp
 By default, ISO-8859-1 is assumed.
 .It Fl f
@@ -135,8 +135,8 @@ Enable symbolic column accessors and omit that first record from the output.
 .It Fl j
 Convert the CSV input into a JavaScript Object Notation (JSON) text sequence document.
 .Pp
-This form is described by RFC 7464 and consists of JSON documents concatenated and framed by
-ASCII RS and LF control characters.
+This form is described by RFC 7464 and consists of concatenated JSON documents,
+each framed by ASCII RS and LF control characters.
 This form is compatible with the
 .Xr jq 1
 utility's
@@ -147,6 +147,10 @@ flag.
 writes each row as a string array or, when the
 .Fl i
 flag is specified, a object with column name string fields.
+.Pp
+If the input character encoding is other than ISO-8859-1, specify using the
+.Fl e
+flag.
 .It Fl q
 Specify an alternate CSV column quote character.
 The usual backslash escape sequences are accepted.
@@ -161,6 +165,7 @@ Output usage message and exit.
 Output version information and exit.
 .It Fl x
 Convert the CSV input into an XML document.
+.Pp
 If the input character encoding is other than ISO-8859-1, specify using the
 .Fl e
 flag.
