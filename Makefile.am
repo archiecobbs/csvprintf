@@ -28,7 +28,8 @@ SUFFIXES=		.in
 .in:
 			rm -f $@; $(subst) < $< >$@
 
-test:			csvprintf
+.PHONY:			tests
+tests:			csvprintf
 			cd tests && ./run.sh
 
 subst=			sed \
