@@ -38,6 +38,7 @@
 #define MODE_NORMAL             0           // normal mode
 #define MODE_XML                1           // XML mode
 #define MODE_JSON               2           // JSON mode
+#define MODE_BASH               3           // bash mode
 
 struct col {
     char    *buf;
@@ -63,6 +64,9 @@ static int readch(FILE *fp, int collapse);
 static void freerow(struct row *row);
 static void print_xml_tag_name(const char *tag, int linenum);
 static void print_json_string(const char *string, int linenum);
+static void print_bash_name(const char *string);
+static void print_bash_value(const char *string);
+static char bash_name_safe(char ch, int first);
 static int decode_utf8(const char *const obuf, size_t olen, int *lenp, int linenum);
 static void convert_to_utf8(iconv_t icd, struct row *row, int linenum);
 static const char *escape_xml_char(int uchar);
@@ -101,8 +105,13 @@ main(int argc, char **argv)
     memset(&column_names, 0, sizeof(column_names));
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "e:f:hijq:s:vxX")) != -1) {
+    while ((ch = getopt(argc, argv, "be:f:hijq:s:vxX")) != -1) {
         switch (ch) {
+        case 'b':
+            if (mode != -1 && mode != MODE_BASH)
+                errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
+            mode = MODE_BASH;
+            break;
         case 'e':
             encoding = optarg;
             break;
@@ -245,6 +254,33 @@ main(int argc, char **argv)
                 }
                 break;
               }
+            case MODE_BASH:
+              {
+                int i, j;
+
+                for (i = 0; i < column_names.num; i++) {
+                    const char *const namei = column_names.fields[i];
+
+                    if (*namei == '\0')
+                        errx(1, "illegal empty string column name");
+                    for (j = i + 1; j < column_names.num; j++) {
+                        const char *const namej = column_names.fields[j];
+                        int same = 1;
+                        int k;
+
+                        for (k = 0; namei[k] != '\0' || namej[k] != '\0'; k++) {
+                            if (namei[k] == '\0' || namej[k] == '\0'
+                              || bash_name_safe(namei[k], k == 0) != bash_name_safe(namej[k], k == 0)) {
+                                same = 0;
+                                break;
+                            }
+                        }
+                        if (same)
+                            errx(1, "duplicate (bash variable) column names \"%s\" and \"%s\"", namei, namej);
+                    }
+                }
+                break;
+              }
             default:
                 break;
             }
@@ -332,6 +368,46 @@ main(int argc, char **argv)
                 printf(">\n");
             }
             printf("  </row>\n");
+            break;
+          }
+        case MODE_BASH:
+          {
+            int col;
+
+            // Start array (if needed)
+            if (!read_column_names)
+                printf("ROW=(");
+
+            // Output row
+            for (col = 0; col < row.num; col++) {
+
+                // Add space
+                if (col > 0 || !read_column_names)
+                    putchar(' ');
+
+                // Add column name (if using column names)
+                if (read_column_names) {
+                    if (col < column_names.num)
+                        print_bash_name(column_names.fields[col]);
+                    else
+                        printf("col%d", col + 1);
+                    putchar('=');
+                }
+
+                // Add column value
+                print_bash_value(row.fields[col]);
+
+                // Add separator
+                if (read_column_names)
+                    putchar(';');
+            }
+
+            // End array (if needed)
+            if (!read_column_names)
+                printf(" )");
+
+            // End line
+            printf("\n");
             break;
           }
         case MODE_NORMAL:
@@ -464,6 +540,82 @@ escape_xml_char(int uchar)
         snprintf(buf, sizeof(buf), "&#%u;", uchar);
         return buf;
     }
+}
+
+static void
+print_bash_name(const char *string)
+{
+    int i;
+
+    for (i = 0; string[i] != '\0'; i++)
+        fputc(bash_name_safe(string[i], i == 0), stdout);
+}
+
+static void
+print_bash_value(const char *string)
+{
+    int single_quotes = 1;
+    int i;
+
+    // See if plain single quotes will work
+    for (i = 0; string[i] != '\0'; i++) {
+        if (string[i] == '\'' || !isprint((u_char)string[i])) {
+            single_quotes = 0;
+            break;
+        }
+    }
+
+    // Output value
+    if (single_quotes)
+        printf("'%s'", string);
+    else {
+        printf("$'");
+        for (i = 0; string[i] != '\0'; i++) {
+            switch (string[i]) {
+            case '\'':
+                printf("\\'");
+                break;
+            case '\\':
+                printf("\\\\");
+                break;
+            case '\b':
+                printf("\\b");
+                break;
+            case '\f':
+                printf("\\f");
+                break;
+            case '\n':
+                printf("\\n");
+                break;
+            case '\r':
+                printf("\\r");
+                break;
+            case '\t':
+                printf("\\t");
+                break;
+            case '\v':
+                printf("\\v");
+                break;
+            default:
+                if (isprint((u_char)string[i]))
+                    putchar((u_char)string[i]);
+                else
+                    printf("\\x%02x", (u_char)string[i]);
+                break;
+            }
+        }
+        putchar('\'');
+    }
+}
+
+static char
+bash_name_safe(char ch, int first)
+{
+    if (isupper((u_char)ch) || islower((u_char)ch) || ch == '_')
+        return ch;
+    if (!first && isdigit((u_char)ch))
+        return ch;
+    return '_';
 }
 
 // Output JSON string
@@ -962,12 +1114,14 @@ usage(void)
 
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  csvprintf [options] format\n");
+    fprintf(stderr, "  csvprintf -b [options]\n");
     fprintf(stderr, "  csvprintf -j [options]\n");
     fprintf(stderr, "  csvprintf -x [options]\n");
     fprintf(stderr, "  csvprintf -X [options]\n");
     fprintf(stderr, "  csvprintf -h\n");
     fprintf(stderr, "  csvprintf -v\n");
     fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -b\t\tConvert input to bash(1) variable assignments\n");
     fprintf(stderr, "  -e encoding\tSpecify input character encoding (XML and JSON modes only; default ISO-8859-1)\n");
     fprintf(stderr, "  -f input\tRead CSV input from specified file (default stdin)\n");
     fprintf(stderr, "  -i\t\tAssume the first CSV record contains column names\n");

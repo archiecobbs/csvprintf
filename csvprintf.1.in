@@ -29,6 +29,12 @@
 .Pp
 .Nm csvprintf
 .Bk -words
+.Fl b
+.Op Ar options
+.Ek
+.Pp
+.Nm csvprintf
+.Bk -words
 .Fl j
 .Op Ar options
 .Ek
@@ -144,11 +150,56 @@ An error occurs if two CSV columns have the same name.
 .Pp
 In JSON mode, a character encoding must be assumed; see
 .Fl e .
+.Sh Bash Mode
+With
+.Fl b ,
+each row is converted into
+.Xr bash 1
+variable assignments which may be applied with the
+.Xr eval 1
+command.
+.Pp
+Without
+.Fl i ,
+the output assigns
+.Ar ROW
+as an array of values.
+The resulting output can be used like this:
+.Bd -literal -offset indent
+cat input.csv | csvprintf -b | while read LINE; do
+    eval "${LINE}"
+    echo "The first column is: ${ROW[0]}"
+    echo "The second column is: ${ROW[1]}"
+    ...
+done
+.Ed
+.Pp
+With
+.Fl i ,
+each column value is assigned to a separate variable whose name is the corresponding column name
+(with underscores replacing non-alphanumeric characters), and an error occurs if two CSV columns have the same name.
+.Pp
+So an input file like this:
+.Bd -literal -offset indent
+"Last Name","First Name","Registered???"
+"Washington","George","Y"
+"Lincoln","Abe","N"
+.Ed
+.Pp
+can be processed like this:
+.Bd -literal -offset indent
+cat input.csv | csvprintf -bi | while read LINE; do
+    eval "${LINE}"
+    echo "First name: ${First_Name}"
+    echo "Last name: ${Last_Name}"
+    echo "Registered: ${Registered___}"
+done
+.Ed
 .Sh Input Encoding
 In all modes, lines must be terminated by LF bytes or CR+LF byte pairs, and the separator and quote characters must be recognizable as single byte values.
 This parsing behavior is compatible with ASCII, ISO-8859-1, UTF-8, etc., but not multi-byte encodings such as UTF-16, which must be re-encoded (e.g., to UTF-8) first.
 .Pp
-In normal mode, column values are copied from input to output bytewise without interpretation.
+In normal and Bash modes, column values are copied from input to output bytewise without interpretation.
 .Pp
 In XML and JSON modes, column values must be interpreted according to an assumed character encoding.
 This encoding defaults to ISO-8859-1 but can be changed with the
@@ -156,6 +207,10 @@ This encoding defaults to ISO-8859-1 but can be changed with the
 flag.
 .Sh OPTIONS
 .Bl -tag -width Ds
+.It Fl b
+Convert each CSV row into a
+.Xr bash 1
+variable assignment line.
 .It Fl e
 Specify input character encoding for XML or JSON mode.
 .Pp
@@ -174,6 +229,10 @@ In normal mode, enable symbolic column accessors.
 In XML mode, use column names for the inner-most XML elements.
 .Pp
 In JSON mode, output objects instead of arrays and use column names for the object fields.
+.Pp
+In Bash mode, output multiple variable assignments using column names instead of a single
+.Ar ROW
+array variable.
 .Pp
 It's possible for a row to have more columns than the column header row did.
 In that case,

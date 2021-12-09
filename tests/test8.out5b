@@ -1,0 +1,3 @@
+ColA='aaa'; ColB='bbb'; ColC='ccc';
+ColA='aaa'; ColB='bbb';
+ColA='aaa'; ColB='bbb'; ColC='ccc'; col4='ddd';

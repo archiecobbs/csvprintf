@@ -1,0 +1,2 @@
+NAME='Fred Smith'; ADDRESS=$'1234 Main St.\rAnytown, USA   39103'; POINTS='123.4567';
+NAME='Wayne "The Great One" Gretsky'; ADDRESS='59 Hockey Lane'; POINTS='999999';
