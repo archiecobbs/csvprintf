@@ -559,7 +559,7 @@ print_bash_value(const char *string)
 
     // See if plain single quotes will work
     for (i = 0; string[i] != '\0'; i++) {
-        if (string[i] == '\'' || !isprint((u_char)string[i])) {
+        if (string[i] == '\'' || !isprint((unsigned char)string[i])) {
             single_quotes = 0;
             break;
         }
@@ -597,10 +597,10 @@ print_bash_value(const char *string)
                 printf("\\v");
                 break;
             default:
-                if (isprint((u_char)string[i]))
-                    putchar((u_char)string[i]);
+                if (isprint((unsigned char)string[i]))
+                    putchar((unsigned char)string[i]);
                 else
-                    printf("\\x%02x", (u_char)string[i]);
+                    printf("\\x%02x", (unsigned char)string[i]);
                 break;
             }
         }
@@ -611,9 +611,9 @@ print_bash_value(const char *string)
 static char
 bash_name_safe(char ch, int first)
 {
-    if (isupper((u_char)ch) || islower((u_char)ch) || ch == '_')
+    if (isupper((unsigned char)ch) || islower((unsigned char)ch) || ch == '_')
         return ch;
-    if (!first && isdigit((u_char)ch))
+    if (!first && isdigit((unsigned char)ch))
         return ch;
     return '_';
 }
@@ -869,9 +869,9 @@ trim(struct col *col)
 {
     size_t skip;
 
-    while (col->len > 0 && isspace((u_char)col->buf[col->len - 1]))
+    while (col->len > 0 && isspace((unsigned char)col->buf[col->len - 1]))
         col->len--;
-    for (skip = 0; skip < col->len && isspace((u_char)col->buf[skip]); skip++)
+    for (skip = 0; skip < col->len && isspace((unsigned char)col->buf[skip]); skip++)
         ;
     col->len -= skip;
     memmove(col->buf, col->buf + skip, col->len);
@@ -1034,7 +1034,7 @@ eatwidthprec(const char *const fspec, const char *desc, const struct row *column
 {
     if (*s == '*')
         return eataccessor(fspec, desc, column_names, s + 1, nargs, args);
-    while (isdigit((u_char)*s))                                 // eat up numerical field width or precision
+    while (isdigit((unsigned char)*s))                          // eat up numerical field width or precision
         s++;
     return s;
 }
@@ -1073,7 +1073,7 @@ eataccessor(const char *const fspec, const char *desc, const struct row *column_
         }
         args[(*nargs)++] = argnum;
     } else {
-        while (isdigit((u_char)*s))
+        while (isdigit((unsigned char)*s))
             s++;
         if (s == start || *s++ != '$')
             errx(1, "missing required column accessor in %s starting at \"%.20s...\"", desc, fspec);
