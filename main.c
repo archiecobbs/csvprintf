@@ -178,9 +178,14 @@ main(int argc, char **argv)
         err(1, "%s", input);
 
     // Initialize iconv
-    if (mode != MODE_NORMAL) {
+    switch (mode) {
+    case MODE_XML:
+    case MODE_JSON:
         if ((icd = iconv_open(XML_OUTPUT_ENCODING, encoding)) == (iconv_t)-1)
             err(1, "%s", encoding);
+        break;
+    default:
+        break;
     }
 
     // XML opening
@@ -215,7 +220,7 @@ main(int argc, char **argv)
         if (first_row && read_column_names) {
 
             // Convert to UTF-8 if needed
-            if (mode != MODE_NORMAL)
+            if (icd != NULL)
                 convert_to_utf8(icd, &row, linenum);
 
             // Save column names
@@ -226,8 +231,10 @@ main(int argc, char **argv)
             if (mode == MODE_NORMAL)
                 nargs = parsefmt(format, &column_names, &args);
 
-            // For JSON object notation, fail if any column names are duplicated
-            if (mode == MODE_JSON) {
+            // Check for illegal or duplicate column names
+            switch (mode) {
+            case MODE_JSON:
+              {
                 int i, j;
 
                 for (i = 0; i < column_names.num - 1; i++) {
@@ -236,6 +243,10 @@ main(int argc, char **argv)
                             errx(1, "duplicate column name \"%s\"", column_names.fields[i]);
                     }
                 }
+                break;
+              }
+            default:
+                break;
             }
 
             // Proceed
@@ -382,7 +393,7 @@ next:
         printf("</csv>\n");
 
     // Clean up iconv
-    if (mode != MODE_NORMAL)
+    if (icd != NULL)
         (void)iconv_close(icd);
 
     // Clean up
