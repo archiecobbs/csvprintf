@@ -146,9 +146,9 @@ In JSON mode, a character encoding must be assumed; see
 .Fl e .
 .Sh Input Encoding
 In all modes, lines must be terminated by LF bytes or CR+LF byte pairs, and the separator and quote characters must be recognizable as single byte values.
+This parsing behavior is compatible with ASCII, ISO-8859-1, UTF-8, etc., but not multi-byte encodings such as UTF-16, which must be re-encoded (e.g., to UTF-8) first.
 .Pp
-Otherwise, column values are copied from input to output without interpretation.
-This behavior is compatible with ASCII, ISO-8859-1, UTF-8, etc., but not multi-byte encodings such as UTF-16, which must be re-encoded first.
+In normal mode, column values are copied from input to output bytewise without interpretation.
 .Pp
 In XML and JSON modes, column values must be interpreted according to an assumed character encoding.
 This encoding defaults to ISO-8859-1 but can be changed with the
@@ -167,17 +167,32 @@ By default (or if ``-'' is specified),
 .Nm
 reads from standard input.
 .It Fl i
-Assume the first CSV record contains column names.
-Enable symbolic column accessors and omit that first record from the output.
+Assume the first CSV record contains column names and omit that record from the output.
+.Pp
+In normal mode, enable symbolic column accessors.
+.Pp
+In XML mode, use column names for the inner-most XML elements.
+.Pp
+In JSON mode, output objects instead of arrays and use column names for the object fields.
+.Pp
+It's possible for a row to have more columns than the column header row did.
+In that case,
+.Nm
+reverts to using
+.Ar col1 ,
+.Ar col2 ,
+etc.
 .It Fl j
 Convert the CSV input into a JavaScript Object Notation (JSON) text sequence document.
 .It Fl q
 Specify an alternate CSV column quote character.
 The usual backslash escape sequences are accepted.
+.Pp
 The default quote character is double quote.
 .It Fl s
 Specify an alternate CSV column separator character.
 The usual backslash escape sequences are accepted.
+.Pp
 The default separator character is comma.
 .It Fl h
 Output usage message and exit.
