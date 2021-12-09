@@ -706,9 +706,9 @@ trim(struct col *col)
 {
     size_t skip;
 
-    while (col->len > 0 && isspace(col->buf[col->len - 1]))
+    while (col->len > 0 && isspace((u_char)col->buf[col->len - 1]))
         col->len--;
-    for (skip = 0; skip < col->len && isspace(col->buf[skip]); skip++)
+    for (skip = 0; skip < col->len && isspace((u_char)col->buf[skip]); skip++)
         ;
     col->len -= skip;
     memmove(col->buf, col->buf + skip, col->len);
@@ -871,7 +871,7 @@ eatwidthprec(const char *const fspec, const char *desc, const struct row *column
 {
     if (*s == '*')
         return eataccessor(fspec, desc, column_names, s + 1, nargs, args);
-    while (isdigit(*s))                                         // eat up numerical field width or precision
+    while (isdigit((u_char)*s))                                 // eat up numerical field width or precision
         s++;
     return s;
 }
@@ -910,7 +910,7 @@ eataccessor(const char *const fspec, const char *desc, const struct row *column_
         }
         args[(*nargs)++] = argnum;
     } else {
-        while (isdigit(*s))
+        while (isdigit((u_char)*s))
             s++;
         if (s == start || *s++ != '$')
             errx(1, "missing required column accessor in %s starting at \"%.20s...\"", desc, fspec);
