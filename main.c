@@ -75,6 +75,7 @@ static char *eatwidthprec(const char *fspec, const char *desc, const struct row 
 static char *eataccessor(const char *fspec, const char *desc, const struct row *column_names,
     char *s, int *nargs, unsigned int *args);
 static void addcolumn(struct row *row, const struct col *col);
+static void growrow(struct row *row);
 static void addchar(struct col *col, int ch);
 static void trim(struct col *col);
 static void usage(void);
@@ -902,16 +903,7 @@ addchar(struct col *col, int ch)
 static void
 addcolumn(struct row *row, const struct col *col)
 {
-    if (row->alloc <= row->num) {
-        int new_alloc;
-        char **new_fields;
-
-        new_alloc = row->alloc == 0 ? 32 : row->alloc * 2;
-        if ((new_fields = realloc(row->fields, new_alloc * sizeof(*row->fields))) == NULL)
-            err(1, "realloc");
-        row->fields = new_fields;
-        row->alloc = new_alloc;
-    }
+    growrow(row);
     if (col->alloc >= col->len + 1) {
         col->buf[col->len] = '\0';
         row->fields[row->num] = col->buf;
@@ -925,6 +917,22 @@ addcolumn(struct row *row, const struct col *col)
     }
     memset(&col, 0, sizeof(col));
     row->num++;
+}
+
+static void
+growrow(struct row *row)
+{
+    size_t new_alloc;
+    char **new_fields;
+
+    if (row->alloc > row->num)
+        return;
+    new_alloc = row->alloc == 0 ? 32 : row->alloc * 2;
+    if ((new_fields = realloc(row->fields, new_alloc * sizeof(*row->fields))) == NULL)
+        err(1, "realloc");
+    row->fields = new_fields;
+    row->alloc = new_alloc;
+    memset(row->fields + row->num, 0, (row->alloc - row->num) * sizeof(*row->fields));
 }
 
 static int
