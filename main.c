@@ -93,8 +93,8 @@ main(int argc, char **argv)
     struct row column_names;
     unsigned int *args = NULL;
     int mode = -1;
-    int read_column_names = 0;
-    int column_name_tags = 0;
+    int read_column_names = 0;                  // strip off first row containing column names
+    int use_column_names = 0;                   // use column names from first row in output
     int first_row = 0;
     int nargs = 0;
     int file_done;
@@ -112,6 +112,7 @@ main(int argc, char **argv)
             if (mode != -1 && mode != MODE_BASH)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_BASH;
+            use_column_names = 1;
             break;
         case 'e':
             encoding = optarg;
@@ -126,18 +127,18 @@ main(int argc, char **argv)
             if (mode != -1 && mode != MODE_JSON)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_JSON;
+            use_column_names = 1;
             break;
-        case 'x':
-            if (mode != -1 && !(mode == MODE_XML && !column_name_tags))
-                errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
-            mode = MODE_XML;
             break;
         case 'X':
-            if (mode != -1 && !(mode == MODE_XML && column_name_tags))
+        case 'x':
+            if (mode != -1 && mode != MODE_XML)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_XML;
-            column_name_tags = 1;
-            read_column_names = 1;
+            if (ch == 'X') {
+                use_column_names = 1;
+                read_column_names = 1;
+            }
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -171,6 +172,8 @@ main(int argc, char **argv)
     // Sanity check
     if (quote == fsep)
         err(1, "quote and field separators cannot be the same character");
+    if (use_column_names && !read_column_names)
+        use_column_names = 0;
 
     // Get and (maybe) parse format string (normal mode only)
     if (mode == MODE_NORMAL) {
@@ -300,7 +303,7 @@ main(int argc, char **argv)
             convert_to_utf8(icd, &row, linenum);
 
             // Output row
-            printf("\x1e%c", read_column_names ? '{' : '[');
+            printf("\x1e%c", use_column_names ? '{' : '[');
             for (col = 0; col < row.num; col++) {
 
                 // Add comma if needed
@@ -308,7 +311,7 @@ main(int argc, char **argv)
                     putchar(',');
 
                 // Add column name (if using object notation)
-                if (read_column_names) {
+                if (use_column_names) {
                     if (col < column_names.num)
                         print_json_string(column_names.fields[col], linenum);
                     else
@@ -319,7 +322,7 @@ main(int argc, char **argv)
                 // Add column value
                 print_json_string(row.fields[col], linenum);
             }
-            printf("%c\n", read_column_names ? '}' : ']');
+            printf("%c\n", use_column_names ? '}' : ']');
             break;
           }
         case MODE_XML:
@@ -341,7 +344,7 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (column_name_tags && col < column_names.num)
+                if (use_column_names && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -362,7 +365,7 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (column_name_tags && col < column_names.num)
+                if (use_column_names && col < column_names.num)
                     print_xml_tag_name(column_names.fields[col], linenum);
                 else
                     printf("col%d", col + 1);
@@ -376,18 +379,18 @@ main(int argc, char **argv)
             int col;
 
             // Start array (if needed)
-            if (!read_column_names)
+            if (!use_column_names)
                 printf("ROW=(");
 
             // Output row
             for (col = 0; col < row.num; col++) {
 
                 // Add space
-                if (col > 0 || !read_column_names)
+                if (col > 0 || !use_column_names)
                     putchar(' ');
 
                 // Add column name (if using column names)
-                if (read_column_names) {
+                if (use_column_names) {
                     if (col < column_names.num)
                         print_bash_name(column_names.fields[col]);
                     else
@@ -399,12 +402,12 @@ main(int argc, char **argv)
                 print_bash_value(row.fields[col]);
 
                 // Add separator
-                if (read_column_names)
+                if (use_column_names)
                     putchar(';');
             }
 
             // End array (if needed)
-            if (!read_column_names)
+            if (!use_column_names)
                 printf(" )");
 
             // End line
