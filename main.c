@@ -907,7 +907,6 @@ addcolumn(struct row *row, const struct col *col)
     if (col->alloc >= col->len + 1) {
         col->buf[col->len] = '\0';
         row->fields[row->num] = col->buf;
-        memset(&col, 0, sizeof(col));
     } else {
         if ((row->fields[row->num] = malloc(col->len + 1)) == NULL)
             err(1, "malloc");
