@@ -1,4 +1,4 @@
-Version Next
+Version 1.3.1 released December 14, 2021
 
     - Added "-c" flag for explicit column names
     - Added "-n" flag that only reads column names

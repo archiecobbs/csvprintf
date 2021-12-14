@@ -16,7 +16,7 @@
 # under the License.
 #
 
-AC_INIT([csvprintf - Simple CSV file parser for the UNIX command line],[1.3.0],[https://github.com/archiecobbs/csvprintf],[csvprintf])
+AC_INIT([csvprintf - Simple CSV file parser for the UNIX command line],[1.3.1],[https://github.com/archiecobbs/csvprintf],[csvprintf])
 AC_CONFIG_AUX_DIR(scripts)
 AM_INIT_AUTOMAKE
 dnl AM_MAINTAINER_MODE
