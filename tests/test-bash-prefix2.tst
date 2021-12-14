@@ -1,0 +1,5 @@
+FLAGS='-bi -p PA'
+STDIN='aaa,TH,ccc\n"a1","b1","c1"\n"a2","b2","c2"\n'
+STDOUT=$'PAaaa=\'a1\'; PAccc=\'c1\';\nPAaaa=\'a2\'; PAccc=\'c2\';\n'
+STDERR=''
+EXITVAL='0'

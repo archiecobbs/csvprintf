@@ -1,0 +1,5 @@
+FLAGS='-bi -p FOO_'
+STDIN='aaa,PATH,ccc\n"a1","b1","c1"\n"a2","b2","c2"\n'
+STDOUT=$'FOO_aaa=\'a1\'; FOO_PATH=\'b1\'; FOO_ccc=\'c1\';\nFOO_aaa=\'a2\'; FOO_PATH=\'b2\'; FOO_ccc=\'c2\';\n'
+STDERR=''
+EXITVAL='0'

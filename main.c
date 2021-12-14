@@ -36,9 +36,10 @@
 #define XML_OUTPUT_ENCODING     "UTF-8"
 
 #define MODE_NORMAL             0           // normal mode
-#define MODE_XML                1           // XML mode
-#define MODE_JSON               2           // JSON mode
-#define MODE_BASH               3           // bash mode
+#define MODE_XML_PLAIN          1           // plain XML mode
+#define MODE_XML_NAMES          2           // XML mode with names
+#define MODE_JSON               3           // JSON mode
+#define MODE_BASH               4           // bash mode
 
 struct col {
     char    *buf;
@@ -54,6 +55,21 @@ struct row {
 
 static int quote = DEFAULT_QUOTE_CHAR;
 static int fsep = DEFAULT_FSEP_CHAR;
+
+static const char *bash_special_vars[] = {
+    "BASH", "BASHOPTS", "BASHPID", "BASH_ALIASES", "BASH_ARGC", "BASH_ARGV", "BASH_CMDS", "BASH_COMMAND",
+    "BASH_EXECUTION_STRING", "BASH_LINENO", "BASH_LOADABLES_PATH", "BASH_REMATCH", "BASH_SOURCE", "BASH_SUBSHELL",
+    "BASH_VERSINFO", "BASH_VERSION", "COMP_CWORD", "COMP_KEY", "COMP_LINE", "COMP_POINT", "COMP_TYPE", "COMP_WORDBREAKS",
+    "COMP_WORDS", "COPROC", "DIRSTACK", "EUID", "FUNCNAME", "GROUPS", "HISTCMD", "HOSTNAME", "HOSTTYPE", "LINENO",
+    "MACHTYPE", "MAPFILE", "OLDPWD", "OPTARG", "OPTIND", "OSTYPE", "PIPESTATUS", "PPID", "PWD", "RANDOM", "READLINE_LINE",
+    "READLINE_POINT", "REPLY", "SECONDS", "SHELLOPTS", "SHLVL", "UID", "BASH_COMPAT", "BASH_ENV", "BASH_XTRACEFD", "CDPATH",
+    "CHILD_MAX", "COLUMNS", "COMPREPLY", "EMACS", "ENV", "EXECIGNORE", "FCEDIT", "FIGNORE", "FUNCNEST", "GLOBIGNORE",
+    "HISTCONTROL", "HISTFILE", "HISTFILESIZE", "HISTIGNORE", "HISTSIZE", "HISTTIMEFORMAT", "HOME", "HOSTFILE", "IFS",
+    "IGNOREEOF", "INPUTRC", "LANG", "LC_ALL", "LC_COLLATE", "LC_CTYPE", "LC_MESSAGES", "LC_NUMERIC", "LC_TIME", "LINES",
+    "MAIL", "MAILCHECK", "MAILPATH", "OPTERR", "PATH", "POSIXLY_CORRECT", "PROMPT_COMMAND", "PROMPT_DIRTRIM", "PS0", "PS1",
+    "PS2", "PS3", "PS4", "SHELL", "TIMEFORMAT", "TMOUT", "TMPDIR", "auto_resume", "histchars"
+};
+#define NUM_BASH_SPECIAL_VARS   (sizeof(bash_special_vars) / sizeof(*bash_special_vars))
 
 static int parsechar(const char *str);
 static int parsefmt(char *fmt, const struct row *column_names, unsigned int **argsp);
@@ -89,6 +105,7 @@ main(int argc, char **argv)
 {
     const char *input = "-";
     const char *encoding = "ISO-8859-1";
+    const char *name_prefix = "";
     char *format = NULL;
     iconv_t icd = NULL;
     FILE *fp = NULL;
@@ -103,6 +120,7 @@ main(int argc, char **argv)
     int nargs = 0;
     int file_done;
     int linenum;
+    int new_mode;
     int ch;
 
     // Initialize
@@ -111,13 +129,12 @@ main(int argc, char **argv)
     memset(&allowed_column_names, 0, sizeof(allowed_column_names));
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "bc:e:f:hijq:s:vxX")) != -1) {
+    while ((ch = getopt(argc, argv, "bc:e:f:hijnp:q:s:vxX")) != -1) {
         switch (ch) {
         case 'b':
             if (mode != -1 && mode != MODE_BASH)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_BASH;
-            use_column_names = 1;
             break;
         case 'c':
             addstring(&allowed_column_names, optarg);
@@ -130,23 +147,28 @@ main(int argc, char **argv)
             break;
         case 'i':
             read_column_names = 1;
+            use_column_names = 1;
+            break;
+        case 'n':
+            read_column_names = 1;
             break;
         case 'j':
             if (mode != -1 && mode != MODE_JSON)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_JSON;
-            use_column_names = 1;
-            break;
             break;
         case 'X':
         case 'x':
-            if (mode != -1 && mode != MODE_XML)
+            new_mode = ch == 'X' ? MODE_XML_NAMES : MODE_XML_PLAIN;
+            if (mode != -1 && mode != new_mode)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
-            mode = MODE_XML;
-            if (ch == 'X') {
+            if ((mode = new_mode) == MODE_XML_NAMES) {
                 use_column_names = 1;
                 read_column_names = 1;
             }
+            break;
+        case 'p':
+            name_prefix = optarg;
             break;
         case 'q':
             if ((quote = parsechar(optarg)) == -1)
@@ -177,13 +199,15 @@ main(int argc, char **argv)
         exit(1);
     }
 
+    // Backward compatbitility hack
+    if (mode == MODE_XML_PLAIN)
+        use_column_names = 0;
+
     // Sanity check
     if (quote == fsep)
         err(1, "quote and field separators cannot be the same character");
-    if (use_column_names && !read_column_names)
-        use_column_names = 0;
     if (allowed_column_names.num > 0 && !read_column_names)
-        err(1, "\"-c\" flag requires \"-i\" flag");
+        err(1, "\"-c\" flag requires \"-n\" flag");
 
     // Get and (maybe) parse format string (normal mode only)
     if (mode == MODE_NORMAL) {
@@ -202,7 +226,8 @@ main(int argc, char **argv)
 
     // Initialize iconv
     switch (mode) {
-    case MODE_XML:
+    case MODE_XML_PLAIN:
+    case MODE_XML_NAMES:
     case MODE_JSON:
         if ((icd = iconv_open(XML_OUTPUT_ENCODING, encoding)) == (iconv_t)-1)
             err(1, "%s", encoding);
@@ -212,7 +237,7 @@ main(int argc, char **argv)
     }
 
     // XML opening
-    if (mode == MODE_XML) {
+    if (mode == MODE_XML_PLAIN || mode == MODE_XML_NAMES) {
         printf("<?xml version=\"1.0\" encoding=\"%s\"?>\n", XML_OUTPUT_ENCODING);
         printf("<csv>\n");
     }
@@ -273,15 +298,19 @@ main(int argc, char **argv)
                 break;
             case MODE_BASH:
                 for (i = 0; i < column_names.num; i++) {
-                    const char *const namei = column_names.fields[i];
+                    char *namei;
 
+                    if (asprintf(&namei, "%s%s", name_prefix, column_names.fields[i]) == -1)
+                        err(1, "asprintf");
                     if (*namei == '\0')
                         errx(1, "illegal empty string column name");
                     for (j = i + 1; j < column_names.num; j++) {
-                        const char *const namej = column_names.fields[j];
+                        char *namej;
                         int same = 1;
                         int k;
 
+                        if (asprintf(&namej, "%s%s", name_prefix, column_names.fields[j]) == -1)
+                            err(1, "asprintf");
                         for (k = 0; namei[k] != '\0' || namej[k] != '\0'; k++) {
                             if (namei[k] == '\0' || namej[k] == '\0'
                               || bash_name_safe(namei[k], k == 0) != bash_name_safe(namej[k], k == 0)) {
@@ -291,7 +320,9 @@ main(int argc, char **argv)
                         }
                         if (same)
                             errx(1, "duplicate (bash variable) column names \"%s\" and \"%s\"", namei, namej);
+                        free(namej);
                     }
+                    free(namei);
                 }
                 break;
             default:
@@ -328,20 +359,26 @@ main(int argc, char **argv)
 
                 // Add column name (if using object notation)
                 if (use_column_names) {
-                    if (col < column_names.num)
+                    if (col < column_names.num) {
+                        putchar('"');
+                        print_json_string(name_prefix, linenum);
                         print_json_string(column_names.fields[col], linenum);
-                    else
+                        putchar('"');
+                    } else
                         printf("\"col%d\"", col + 1);
                     putchar(':');
                 }
 
                 // Add column value
+                putchar('"');
                 print_json_string(row.fields[col], linenum);
+                putchar('"');
             }
             printf("%c\n", use_column_names ? '}' : ']');
             break;
           }
-        case MODE_XML:
+        case MODE_XML_PLAIN:
+        case MODE_XML_NAMES:
           {
             int col;
 
@@ -367,9 +404,10 @@ main(int argc, char **argv)
 
                 // Open XML tag
                 printf("    <");
-                if (use_column_names && col < column_names.num)
+                if (use_column_names && col < column_names.num) {
+                    print_xml_tag_name(name_prefix, linenum);
                     print_xml_tag_name(column_names.fields[col], linenum);
-                else
+                } else
                     printf("col%d", col + 1);
                 printf(">");
 
@@ -388,9 +426,10 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (use_column_names && col < column_names.num)
+                if (use_column_names && col < column_names.num) {
+                    print_xml_tag_name(name_prefix, linenum);
                     print_xml_tag_name(column_names.fields[col], linenum);
-                else
+                } else
                     printf("col%d", col + 1);
                 printf(">\n");
             }
@@ -399,6 +438,7 @@ main(int argc, char **argv)
           }
         case MODE_BASH:
           {
+            char bash_name_buf[64];         // buffer just needs to be be enough to hold any of the bash_special_vars[]
             int col;
 
             // Start array (if needed)
@@ -415,15 +455,23 @@ main(int argc, char **argv)
                   && !findstring(&allowed_column_names, column_names.fields[col]))
                     continue;
 
+                // Elide any BASH special variable names
+                if (use_column_names && col < column_names.num) {
+                    snprintf(bash_name_buf, sizeof(bash_name_buf), "%s%s", name_prefix, column_names.fields[col]);
+                    if (findstring2(bash_special_vars, NUM_BASH_SPECIAL_VARS, bash_name_buf))
+                        continue;
+                }
+
                 // Add space
                 if (col > 0 || !use_column_names)
                     putchar(' ');
 
                 // Add column name (if using column names)
                 if (use_column_names) {
-                    if (col < column_names.num)
+                    if (col < column_names.num) {
+                        print_bash_name(name_prefix);
                         print_bash_name(column_names.fields[col]);
-                    else
+                    } else
                         printf("col%d", col + 1);
                     putchar('=');
                 }
@@ -499,7 +547,7 @@ next:
     }
 
     // XML closing
-    if (mode == MODE_XML)
+    if (mode == MODE_XML_PLAIN || mode == MODE_XML_NAMES)
         printf("</csv>\n");
 
     // Clean up iconv
@@ -659,7 +707,6 @@ print_json_string(const char *string, int linenum)
     int uchar;
     int uclen;
 
-    putchar('"');
     while (*string != '\0') {
         uchar = decode_utf8(string, strlen(string), &uclen, linenum);
         switch (uchar) {
@@ -693,7 +740,6 @@ print_json_string(const char *string, int linenum)
         }
         string += uclen;
     }
-    putchar('"');
 }
 
 // Convert row columns to UTF-8 encoding
