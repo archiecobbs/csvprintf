@@ -1250,8 +1250,11 @@ usage(void)
 static void
 version(void)
 {
-    fprintf(stderr, "%s version %s (%s)\n", PACKAGE_TARNAME, PACKAGE_VERSION, csvprintf_version);
-    fprintf(stderr, "Copyright (C) 2010 Archie L. Cobbs\n");
+    fprintf(stderr, "%s version %s", PACKAGE_TARNAME, PACKAGE_VERSION);
+    if (*csvprintf_version != '\0')
+        fprintf(stderr, " (%s)", csvprintf_version);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Copyright (C) 2010-2021 Archie L. Cobbs\n");
     fprintf(stderr, "This is free software; see the source for copying conditions. There is NO\n");
     fprintf(stderr, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
 }
