@@ -211,6 +211,16 @@ flag.
 Convert each CSV row into a
 .Xr bash 1
 variable assignment line.
+.It Fl c Ar colname
+Specify a column to be included when using column names in XML, JSON, or Bash output.
+.Pp
+Without this flag, all columns are included.
+When this flag is used one or more times,
+only the specified columns are included.
+.Pp
+If any
+.Ar colname
+doesn't exist, an error occurs.
 .It Fl e
 Specify input character encoding for XML or JSON mode.
 .Pp

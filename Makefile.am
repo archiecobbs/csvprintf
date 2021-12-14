@@ -30,7 +30,14 @@ SUFFIXES=		.in
 
 .PHONY:			tests
 tests:			csvprintf
-			cd tests && ./run.sh
+			@echo '************'
+			@echo 'TEST SUITE 1'
+			@echo '************'
+			@cd tests && ./run.sh
+			@echo '************'
+			@echo 'TEST SUITE 2'
+			@echo '************'
+			@cd tests && ./run2.sh
 
 subst=			sed \
 			    -e 's|@PACKAGE[@]|$(PACKAGE)|g' \

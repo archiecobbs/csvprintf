@@ -1,5 +1,6 @@
 Version Next
 
+    - Added "-c" flag for explicit column names
     - Fixed build error on systems without 'u_char' defined
 
 Version 1.3.0 released December 9, 2021

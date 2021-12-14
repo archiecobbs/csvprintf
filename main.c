@@ -75,6 +75,9 @@ static char *eatwidthprec(const char *fspec, const char *desc, const struct row 
 static char *eataccessor(const char *fspec, const char *desc, const struct row *column_names,
     char *s, int *nargs, unsigned int *args);
 static void addcolumn(struct row *row, const struct col *col);
+static void addstring(struct row *row, const char *const string);
+static int findstring(struct row *row, const char *const string);
+static int findstring2(const char *const *list, size_t num, const char *const string);
 static void growrow(struct row *row);
 static void addchar(struct col *col, int ch);
 static void trim(struct col *col);
@@ -91,6 +94,7 @@ main(int argc, char **argv)
     FILE *fp = NULL;
     struct row row;
     struct row column_names;
+    struct row allowed_column_names;
     unsigned int *args = NULL;
     int mode = -1;
     int read_column_names = 0;                  // strip off first row containing column names
@@ -104,15 +108,19 @@ main(int argc, char **argv)
     // Initialize
     memset(&row, 0, sizeof(row));
     memset(&column_names, 0, sizeof(column_names));
+    memset(&allowed_column_names, 0, sizeof(allowed_column_names));
 
     // Parse command line
-    while ((ch = getopt(argc, argv, "be:f:hijq:s:vxX")) != -1) {
+    while ((ch = getopt(argc, argv, "bc:e:f:hijq:s:vxX")) != -1) {
         switch (ch) {
         case 'b':
             if (mode != -1 && mode != MODE_BASH)
                 errx(1, "flag \"%c\" conflicts with previous mode flag", ch);
             mode = MODE_BASH;
             use_column_names = 1;
+            break;
+        case 'c':
+            addstring(&allowed_column_names, optarg);
             break;
         case 'e':
             encoding = optarg;
@@ -174,6 +182,8 @@ main(int argc, char **argv)
         err(1, "quote and field separators cannot be the same character");
     if (use_column_names && !read_column_names)
         use_column_names = 0;
+    if (allowed_column_names.num > 0 && !read_column_names)
+        err(1, "\"-c\" flag requires \"-i\" flag");
 
     // Get and (maybe) parse format string (normal mode only)
     if (mode == MODE_NORMAL) {
@@ -231,6 +241,7 @@ main(int argc, char **argv)
 
         // Gather column names from first row, if configured
         if (first_row && read_column_names) {
+            int i, j;
 
             // Convert to UTF-8 if needed
             if (icd != NULL)
@@ -244,12 +255,15 @@ main(int argc, char **argv)
             if (mode == MODE_NORMAL)
                 nargs = parsefmt(format, &column_names, &args);
 
+            // Check that all explicitly specified columns are actually present
+            for (i = 0; i < allowed_column_names.num; i++) {
+                if (!findstring(&column_names, allowed_column_names.fields[i]))
+                    errx(1, "column \"%s\" not found", allowed_column_names.fields[i]);
+            }
+
             // Check for illegal or duplicate column names
             switch (mode) {
             case MODE_JSON:
-              {
-                int i, j;
-
                 for (i = 0; i < column_names.num - 1; i++) {
                     for (j = i + 1; j < column_names.num; j++) {
                         if (strcmp(column_names.fields[i], column_names.fields[j]) == 0)
@@ -257,11 +271,7 @@ main(int argc, char **argv)
                     }
                 }
                 break;
-              }
             case MODE_BASH:
-              {
-                int i, j;
-
                 for (i = 0; i < column_names.num; i++) {
                     const char *const namei = column_names.fields[i];
 
@@ -284,7 +294,6 @@ main(int argc, char **argv)
                     }
                 }
                 break;
-              }
             default:
                 break;
             }
@@ -305,6 +314,13 @@ main(int argc, char **argv)
             // Output row
             printf("\x1e%c", use_column_names ? '{' : '[');
             for (col = 0; col < row.num; col++) {
+
+                // Check whether column should be included
+                if (use_column_names
+                  && allowed_column_names.num > 0
+                  && col < column_names.num
+                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                    continue;
 
                 // Add comma if needed
                 if (col > 0)
@@ -341,6 +357,13 @@ main(int argc, char **argv)
                 int uchar;
                 int uclen;
                 int i;
+
+                // Check whether column should be included
+                if (use_column_names
+                  && allowed_column_names.num > 0
+                  && col < column_names.num
+                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                    continue;
 
                 // Open XML tag
                 printf("    <");
@@ -384,6 +407,13 @@ main(int argc, char **argv)
 
             // Output row
             for (col = 0; col < row.num; col++) {
+
+                // Check whether column should be included
+                if (use_column_names
+                  && allowed_column_names.num > 0
+                  && col < column_names.num
+                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                    continue;
 
                 // Add space
                 if (col > 0 || !use_column_names)
@@ -919,6 +949,33 @@ addcolumn(struct row *row, const struct col *col)
     }
     memset(&col, 0, sizeof(col));
     row->num++;
+}
+
+// Copy given string and add to row
+static void
+addstring(struct row *row, const char *const string)
+{
+    growrow(row);
+    if ((row->fields[row->num++] = strdup(string)) == NULL)
+        err(1, "strdup");
+}
+
+static int
+findstring(struct row *row, const char *const string)
+{
+    return findstring2((const char *const *)row->fields, row->num, string);
+}
+
+static int
+findstring2(const char *const *list, size_t num, const char *const string)
+{
+    size_t i;
+
+    for (i = 0; i < num; i++) {
+        if (strcmp(list[i], string) == 0)
+            return 1;
+    }
+    return 0;
 }
 
 static void
