@@ -57,28 +57,27 @@ AC_SEARCH_LIBS([iconv_open], [iconv],,
     [if test `uname -o` = 'Cygwin' -a -f /usr/lib/libiconv.a; then LIBS="-liconv ${LIBS}"; else AC_MSG_ERROR([required function iconv_open missing]); fi])
 
 # Check for required header files
-AC_HEADER_STDC
 AC_CHECK_HEADERS(sys/wait.h assert.h ctype.h err.h errno.h stddef.h stdint.h stdio.h stdlib.h string.h unistd.h, [],
 	[AC_MSG_ERROR([required header file '$ac_header' missing])])
 
 # Optional features
 AC_ARG_ENABLE(assertions,
-    AC_HELP_STRING([--enable-assertions],
+    AS_HELP_STRING([--enable-assertions],
         [enable debugging sanity checks (default NO)]),
     [test x"$enableval" = "xyes" || AC_DEFINE(NDEBUG, 1, [disable assertions])],
     [AC_DEFINE(NDEBUG, 1, [disable assertions])])
 AC_ARG_ENABLE(gprof,
-    AC_HELP_STRING([--enable-gprof],
+    AS_HELP_STRING([--enable-gprof],
         [Compile and link with gprof(1) support (default NO)]),
     [test x"$enableval" = "xyes" && CFLAGS="${CFLAGS} -pg"])
 AC_ARG_ENABLE(Werror,
-    AC_HELP_STRING([--enable-Werror],
+    AS_HELP_STRING([--enable-Werror],
         [enable compilation with -Werror flag (default NO)]),
     [test x"$enableval" = "xyes" && CFLAGS="${CFLAGS} -Werror"])
 
 # Generated files
 AC_CONFIG_FILES(Makefile)
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
 
 # Go
 AC_OUTPUT
