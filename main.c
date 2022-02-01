@@ -390,6 +390,7 @@ main(int argc, char **argv)
             for (col = 0; col < row.num; col++) {
                 const char *ptr = row.fields[col];
                 int len = strlen(ptr);
+                int use_column_names_this_tag;
                 const char *esc;
                 int uchar;
                 int uclen;
@@ -402,9 +403,13 @@ main(int argc, char **argv)
                   && !findstring(&allowed_column_names, column_names.fields[col]))
                     continue;
 
+                // Determine whether we can actually use column name for XML tag name
+                use_column_names_this_tag = use_column_names && col < column_names.num
+                  && (*name_prefix != '\0' || *column_names.fields[col] != '\0');
+
                 // Open XML tag
                 printf("    <");
-                if (use_column_names && col < column_names.num) {
+                if (use_column_names_this_tag) {
                     print_xml_tag_name(name_prefix, linenum);
                     print_xml_tag_name(column_names.fields[col], linenum);
                 } else
@@ -426,7 +431,7 @@ main(int argc, char **argv)
 
                 // Close XML tag
                 printf("</");
-                if (use_column_names && col < column_names.num) {
+                if (use_column_names_this_tag) {
                     print_xml_tag_name(name_prefix, linenum);
                     print_xml_tag_name(column_names.fields[col], linenum);
                 } else

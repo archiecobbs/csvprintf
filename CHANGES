@@ -1,3 +1,7 @@
+Version Next
+
+    - Fixed bug where we could emit empty XML tag names
+
 Version 1.3.1 released December 14, 2021
 
     - Added "-c" flag for explicit column names
