@@ -1,0 +1,5 @@
+FLAGS='-bi -p PA_'
+STDIN=$'aaa,bbb,ccc\n\'aa\'xx\',"bb""yy",cc`zz\\ww\n'
+STDOUT=$'PA_aaa=$\'\\\'aa\\\'xx\\\'\'; PA_bbb=\'bb"yy\'; PA_ccc=\'cc`zz\\ww\';\n'
+STDERR=''
+EXITVAL='0'
