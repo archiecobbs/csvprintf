@@ -1259,7 +1259,7 @@ version(void)
     if (*csvprintf_version != '\0')
         fprintf(stderr, " (%s)", csvprintf_version);
     fprintf(stderr, "\n");
-    fprintf(stderr, "Copyright (C) 2010-2021 Archie L. Cobbs\n");
+    fprintf(stderr, "Copyright (C) 2010-2023 Archie L. Cobbs\n");
     fprintf(stderr, "This is free software; see the source for copying conditions. There is NO\n");
     fprintf(stderr, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
 }
