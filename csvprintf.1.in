@@ -157,7 +157,7 @@ Normally the output just assigns
 as an array of values.
 The resulting output can be used like this:
 .Bd -literal -offset indent
-cat input.csv | csvprintf -b | while read LINE; do
+cat input.csv | csvprintf -b | while read -r LINE; do
     eval "${LINE}"
     echo "The first column is: ${ROW[0]}"
     echo "The second column is: ${ROW[1]}"
@@ -179,30 +179,36 @@ So an input file like this:
 .Pp
 can be processed like this:
 .Bd -literal -offset indent
-cat input.csv | csvprintf -bi -p ROW_ | while read LINE; do
+cat input.csv | csvprintf -bi -p ROW_ | while read -r LINE; do
     eval "${LINE}"
     echo "First name: ${ROW_First_Name}"
     echo "Last name: ${ROW_Last_Name}"
     echo "Registered: ${ROW_Registered___}"
 done
 .Ed
+.Sh Bash Mode Security Concerns
+There are two security issues to be aware of when using Bash Mode.
 .Pp
-The
+First, the
 .Fl i
-flag opens a potential security hole because Bash has several special variables like
+flag opens a security hole because Bash has several special variables like
 .Ar PATH ,
 .Ar TMPDIR ,
 etc., which could be overwritten by malicious input.
 To prevent this,
 .Nm
-omits known Bash variables.
-They can be explicitly white-listed using the
+omits known Bash variables, but for tighter security use the
 .Fl c
-flag.
-.Pp
-In any case, use of the
+flag to explicitly white-list the variables you need.
+In addition, use of the
 .Fl p
-flag is recommended in Bash Mode to help avoid namespace collisions.
+flag is always recommended in Bash Mode to help avoid namespace collisions.
+.Pp
+Secondly, if the Bash Mode output is piped into
+.Ar "while read"
+then the
+.Fl r
+flag must be used to prevent extraneous decoding of backslash escapes.
 .Sh Input Encoding
 In all modes, lines must be terminated by LF bytes or CR+LF byte pairs, and the separator and quote characters must be recognizable as single byte values.
 This parsing behavior is compatible with ASCII, ISO-8859-1, UTF-8, etc., but not multi-byte encodings such as UTF-16, which must be re-encoded (e.g., to UTF-8) first.
