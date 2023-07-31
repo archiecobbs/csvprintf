@@ -848,7 +848,7 @@ readcol(FILE *fp, struct row *row, int *linenum)
     int row_done;
     int ch;
 
-    // Process initial stuff; skip leading whitespace
+    // Process initial stuff; skip leading whitespace, excluding our field separator (which could be TAB)
     do {
         if ((ch = readch(fp, 1)) == EOF)
             ch = '\n';
@@ -858,7 +858,7 @@ readcol(FILE *fp, struct row *row, int *linenum)
             (*linenum)++;
             return 0;
         }
-    } while (isspace(ch));
+    } while (isspace(ch) && ch != fsep);
     ungetc(ch, fp);
 
     // Read quoted or unquoted value
