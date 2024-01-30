@@ -290,6 +290,9 @@ main(int argc, char **argv)
             switch (mode) {
             case MODE_JSON:
                 for (i = 0; i < column_names.num - 1; i++) {
+                    if (allowed_column_names.num > 0
+                      && !findstring(&allowed_column_names, column_names.fields[i]))
+                        continue;
                     for (j = i + 1; j < column_names.num; j++) {
                         if (strcmp(column_names.fields[i], column_names.fields[j]) == 0)
                             errx(1, "duplicate column name \"%s\"", column_names.fields[i]);
@@ -300,6 +303,9 @@ main(int argc, char **argv)
                 for (i = 0; i < column_names.num; i++) {
                     char *namei;
 
+                    if (allowed_column_names.num > 0
+                      && !findstring(&allowed_column_names, column_names.fields[i]))
+                        continue;
                     if (asprintf(&namei, "%s%s", name_prefix, column_names.fields[i]) == -1)
                         err(1, "asprintf");
                     if (*namei == '\0')

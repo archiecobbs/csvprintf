@@ -1,6 +1,7 @@
 Version Next
 
     - Fixed bug where \t separator was being skipped as whitespace
+    - Allow duplicate column names if the "-c" flag avoids them
 
 Version 1.3.2 released January 25, 2023
 
