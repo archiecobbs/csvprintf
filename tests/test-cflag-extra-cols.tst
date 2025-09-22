@@ -1,0 +1,5 @@
+FLAGS='-ib -p ROW_ -c aaa'
+STDIN='"aaa","bbb"\n"a1","b1","c1"\n"a2","b2","c2"\n'
+STDOUT=$'ROW_aaa=\'a1\';\nROW_aaa=\'a2\';\n'
+STDERR=''
+EXITVAL='0'

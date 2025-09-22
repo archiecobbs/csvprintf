@@ -355,8 +355,7 @@ main(int argc, char **argv)
                 // Check whether column should be included
                 if (use_column_names
                   && allowed_column_names.num > 0
-                  && col < column_names.num
-                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                  && (col >= column_names.num || !findstring(&allowed_column_names, column_names.fields[col])))
                     continue;
 
                 // Add comma if needed
@@ -405,8 +404,7 @@ main(int argc, char **argv)
                 // Check whether column should be included
                 if (use_column_names
                   && allowed_column_names.num > 0
-                  && col < column_names.num
-                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                  && (col >= column_names.num || !findstring(&allowed_column_names, column_names.fields[col])))
                     continue;
 
                 // Determine whether we can actually use column name for XML tag name
@@ -462,8 +460,7 @@ main(int argc, char **argv)
                 // Check whether column should be included
                 if (use_column_names
                   && allowed_column_names.num > 0
-                  && col < column_names.num
-                  && !findstring(&allowed_column_names, column_names.fields[col]))
+                  && (col >= column_names.num || !findstring(&allowed_column_names, column_names.fields[col])))
                     continue;
 
                 // Elide any BASH special variable names
