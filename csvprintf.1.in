@@ -68,7 +68,7 @@ command line utility: you supply a
 format string on the command line, and each row of the CSV file is split into arguments and formatted accordingly.
 .Sh Normal Mode
 In the first form shown above, the format specifiers in the format string specify which which CSV column to format.
-The column accessor within each format specifier takes one of two forms: numeric or symbolic.
+The column accessor within each format specifier takes one of three forms: numeric, symbolic, or column name.
 .Pp
 A numeric column accessor is a sequence of decimal digits followed by the
 .Pa $
@@ -87,7 +87,7 @@ When the
 or
 .Fl n
 flag is given, the first row is assumed to contain column names and is not output.
-This flag also enables support for symbolic column accessors.
+This flag also enables support for symbolic and column name column accessors.
 .Pp
 A symbolic column accessor uses the column's name, as specified in the first row, enclosed in curly braces.
 For example, if the first row is
@@ -99,6 +99,15 @@ would be equivalent to the format string
 .Pp
 Specifying a column name that does not appear in exactly one column in the first row generates an error,
 so the use of symbolic column accessors adds an extra consistency check.
+.Pp
+A column name column accessor just outputs the name of the column; the row's value in that column is ignored.
+This permits column names in the output even when they are not known ahead of time.
+A column name column accessor is specified by putting the column's numeric index in square brackets.
+For example, the following format string would output the first three columns in each row, labeled by their names, on three lines:
+.Pp
+.Pa \(dq%[1]s: %1$s\(rsn%[2]s: %2$s\(rsn%[3]s: %3$s\(rsn\(dq .
+.Pp
+If the specified column index is zero or greater than the number of columns in the first row, an error occurs.
 .Sh XML Mode
 With
 .Fl x ,
@@ -295,7 +304,7 @@ Convert the input into a JavaScript Object Notation (JSON) text sequence documen
 .It Fl n
 Assume the first CSV record contains column names and omit from the output.
 .Pp
-In normal mode, enable symbolic column accessors.
+In normal mode, enable symbolic and column name accessors.
 .It Fl p
 Specify a common prefix (UTF-8 encoding) to use with all column names in the output.
 .Pp

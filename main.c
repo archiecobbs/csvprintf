@@ -526,6 +526,7 @@ main(int argc, char **argv)
                 for (i = 0; i < nargs; i++) {
                     const int arg = args[i];
                     argv[2 + i] =
+                      arg < 0 ? column_names.fields[~arg] :     // column name
                       arg == 0 ? ncolbuf :                      // number of columns in row
                       arg <= row.num ? row.fields[arg - 1] :    // column value
                       empty_string;                             // column index out of range
@@ -1053,8 +1054,9 @@ growrow(struct row *row)
     memset(row->fields + row->num, 0, (row->alloc - row->num) * sizeof(*row->fields));
 }
 
-// Parse format string, permitting "{Column Name}" accessors if "column_names" is not NULL.
+// Parse format string, permitting "{Column Name}" and "[3]" accessors if "column_names" is not NULL.
 // Build an array of column indicies, one for each %x format specifier, and return the length of that array.
+// Negative indicies are used for column name accessors like "[3]".
 static int
 parsefmt(char *fmt, const struct row *column_names, unsigned int **argsp)
 {
@@ -1199,6 +1201,20 @@ eataccessor(const char *const fspec, const char *desc, const struct row *column_
             errx(1, "unknown column name \"%.*s\" in symbolic column accessor in %s starting at \"%.20s...\"",
               namelen, colname, desc, fspec);
         }
+    } else if (*s == '[') {
+        if (column_names == NULL)
+            errx(1, "column name accessors require \"-i\" flag in %s starting at \"%.20s...\"", desc, fspec);
+        s++;
+        while (isdigit((unsigned char)*s))
+            s++;
+        if (s == start || *s++ != ']')
+            errx(1, "missing required column accessor in %s starting at \"%.20s...\"", desc, fspec);
+        sscanf(start + 1, "%u", &argnum);
+        if (argnum < 1 || argnum > column_names->num) {
+            errx(1, "invalid column name accessor index %d not in the range %d..%d in %s starting at \"%.20s...\"",
+              argnum, 1, (int)column_names->num, desc, fspec);
+        }
+        argnum = -argnum;
     } else {
         while (isdigit((unsigned char)*s))
             s++;
