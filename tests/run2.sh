@@ -74,7 +74,7 @@ runtest()
     echo -en "${STDOUT}" > "${TMP_STDOUT_EXPECTED}"
     echo -en "${STDERR}" > "${TMP_STDERR_EXPECTED}"
     set +e
-    echo -en "${STDIN}" | ../csvprintf ${FLAGS} >"${TMP_STDOUT_ACTUAL}" 2>"${TMP_STDERR_ACTUAL}"
+    echo -en "${STDIN}" | ../csvprintf "${FLAGS[@]}" >"${TMP_STDOUT_ACTUAL}" 2>"${TMP_STDERR_ACTUAL}"
     ACTUAL_EXITVAL="$?"
     set -e
 
@@ -103,7 +103,7 @@ runtest()
     else
         echo "******************************************************"
         echo "test: ${TESTFILE} FAILED with:"
-        echo "  FLAGS='${FLAGS}'"
+        echo "  FLAGS='${FLAGS[*]}'"
         echo "  STDIN='${STDIN}'"
         echo "******************************************************"
     fi

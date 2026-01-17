@@ -1,4 +1,4 @@
-FLAGS='-nj -s \t'
+FLAGS=( -nj -s '\t' )
 STDIN='aaa\tbbb\tccc\n\t\t\n'
 STDOUT='\x1e["","",""]\n'
 STDERR=''

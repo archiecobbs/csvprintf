@@ -1,4 +1,4 @@
-FLAGS='-jn'
+FLAGS=( -jn )
 STDIN='aaa,bbb\n"a1","b1"\n"a2","b2"\n'
 STDOUT='\x1e["a1","b1"]\n\x1e["a2","b2"]\n'
 STDERR=''

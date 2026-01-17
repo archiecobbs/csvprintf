@@ -1,4 +1,4 @@
-FLAGS='-X -c bbb -c zzz'
+FLAGS=( -X -c bbb -c zzz )
 STDIN='aaa,bbb,ccc\n"a1","b1","c1"\n"a2","b2","c2"\n'
 STDOUT='!IGNORE!'
 STDERR='csvprintf: column "zzz" not found\n'
