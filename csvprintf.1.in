@@ -66,26 +66,30 @@ works like the
 command line utility: you supply a
 .Xr printf 1
 format string on the command line, and each row of the CSV file is split into arguments and formatted accordingly.
-.Pp
-The format specifiers in the format string contain numeric or symbolic column accessors to specify which CSV column to format.
+.Sh Normal Mode
+In the first form shown above, the format specifiers in the format string specify which which CSV column to format.
+The column accessor within each format specifier takes one of two forms: numeric or symbolic.
 .Pp
 A numeric column accessor is a sequence of decimal digits followed by the
 .Pa $
 character (the same accessor format supported by
 .Xr printf 1 ) .
 So for example,
-.Pa \(dq%3$d\(dq
-would format the third CSV column as a decimal value.
-In addition, the
+.Pa \(dq%3$-10d\(dq
+would format the third CSV column as a decimal value, left justified, in a 10 column wide field.
+Columns are numbered starting at one;
+the
 .Pa \(dq%0$d\(dq
 specifier will print the number of columns in the record.
 .Pp
 When the
+.Fl i
+or
 .Fl n
 flag is given, the first row is assumed to contain column names and is not output.
-This allows symbolic, instead of numeric, column accessors to be used.
-A symbolic column accessor is the column name enclosed in curly braces.
+This flag also enables support for symbolic column accessors.
 .Pp
+A symbolic column accessor uses the column's name, as specified in the first row, enclosed in curly braces.
 For example, if the first row is
 .Pa FirstName,Lastname,IdNum
 then the format string
@@ -93,7 +97,7 @@ then the format string
 would be equivalent to the format string
 .Pa \(dq%3$04d: %2$s, %1$s\(dq .
 .Pp
-Specifying a column name that does not appear in the first row generates an error,
+Specifying a column name that does not appear in exactly one column in the first row generates an error,
 so the use of symbolic column accessors adds an extra consistency check.
 .Sh XML Mode
 With
@@ -114,6 +118,13 @@ etc.;
 with
 .Fl i ,
 the sub-elements use the column names read from the first row (with illegal characters replaced by underscores).
+.Pp
+Specifying
+.Fl X
+is equivalent to specifying both
+.Fl x
+and
+.Fl i .
 .Pp
 In XML mode, a character encoding must be assumed; see
 .Fl e .
@@ -139,7 +150,10 @@ Normally each row is written as a string array;
 with
 .Fl i ,
 each row is written as an object, using column names for fields.
-An error occurs if two columns have the same name.
+An error occurs if two columns to be output have the same name.
+Use the
+.Fl c
+flag to whitelist the set of fields that are output.
 .Pp
 In JSON mode, a character encoding must be assumed; see
 .Fl e .
@@ -235,6 +249,13 @@ only the specified columns are included.
 If any
 .Ar colname
 doesn't exist, an error occurs.
+.Pp
+Use of this flag requires the
+.Fl i ,
+.Fl n ,
+or
+.Fl X
+flag.
 .It Fl e
 Specify input character encoding for XML or JSON mode.
 .Pp
