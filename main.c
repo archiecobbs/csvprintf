@@ -503,7 +503,7 @@ main(int argc, char **argv)
         case MODE_NORMAL:
           {
             char ncolbuf[32];
-            char empty[] = { '\0' };
+            char empty_string[] = { '\0' };
             pid_t pid;
             pid_t result;
             int status;
@@ -523,8 +523,13 @@ main(int argc, char **argv)
                     err(1, "strdup");
                 argv[1] = format;
                 snprintf(ncolbuf, sizeof(ncolbuf), "%lu", (unsigned long)row.num);
-                for (i = 0; i < nargs; i++)
-                    argv[2 + i] = args[i] == 0 ? ncolbuf : args[i] <= row.num ? row.fields[args[i] - 1] : empty;
+                for (i = 0; i < nargs; i++) {
+                    const int arg = args[i];
+                    argv[2 + i] =
+                      arg == 0 ? ncolbuf :                      // number of columns in row
+                      arg <= row.num ? row.fields[arg - 1] :    // column value
+                      empty_string;                             // column index out of range
+                }
                 argv[2 + nargs] = NULL;
                 execvp(PRINTF_PROGRAM, argv);
                 err(1, "execvp");
@@ -1048,6 +1053,8 @@ growrow(struct row *row)
     memset(row->fields + row->num, 0, (row->alloc - row->num) * sizeof(*row->fields));
 }
 
+// Parse format string, permitting "{Column Name}" accessors if "column_names" is not NULL.
+// Build an array of column indicies, one for each %x format specifier, and return the length of that array.
 static int
 parsefmt(char *fmt, const struct row *column_names, unsigned int **argsp)
 {
@@ -1192,14 +1199,14 @@ eataccessor(const char *const fspec, const char *desc, const struct row *column_
             errx(1, "unknown column name \"%.*s\" in symbolic column accessor in %s starting at \"%.20s...\"",
               namelen, colname, desc, fspec);
         }
-        args[(*nargs)++] = argnum;
     } else {
         while (isdigit((unsigned char)*s))
             s++;
         if (s == start || *s++ != '$')
             errx(1, "missing required column accessor in %s starting at \"%.20s...\"", desc, fspec);
-        sscanf(start, "%u", &args[(*nargs)++]);
+        sscanf(start, "%u", &argnum);
     }
+    args[(*nargs)++] = argnum;
     memmove(start, s, strlen(s) + 1);
     return start;
 }
